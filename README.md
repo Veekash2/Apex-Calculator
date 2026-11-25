@@ -8,9 +8,14 @@ Uses the [Apex Legends Status API](https://apexlegendsapi.com) to look up player
 
 ## How it works
 
-- On the site, type a profile name and click **Look up**. For a new profile the site opens a pre-filled GitHub issue (`lookup:<PLATFORM>:<name>`); submit it.
-- The issue triggers `.github/workflows/update-stats.yml`, which calls the API with the `APEX_API_KEY` **repository secret**, commits the result to `stats/<platform>/<name>.json`, and closes the issue. Only issues opened by the repo owner run a lookup.
-- The site waits for that file and shows the stats. Profiles already looked up refresh hourly. The API key never reaches the website.
+- Anyone can type a profile name on the site and click **Look up** to get live stats.
+- The page calls `api/stats.js`, a Vercel serverless function that reads the key from the `APEX_API_KEY` **environment variable** and calls the API. The key never reaches the browser. Identical lookups are cached for 2 minutes to stay within API limits.
+- The site works on Vercel directly, and the GitHub Pages copy calls the Vercel function (set `VERCEL_URL` in `index.html` to your Vercel address).
+
+## Deploy (Vercel)
+
+1. Sign in at https://vercel.com with GitHub and **Import** this repository (no build settings needed).
+2. Under **Environment Variables**, add `APEX_API_KEY` = your key, then **Deploy**.
 - **Packs opened** isn't available from the API, so the site has a counter you update yourself; it's saved in your browser.
 
 ## Command line

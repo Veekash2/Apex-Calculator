@@ -157,12 +157,7 @@
       <button class="primary" type="submit">Look up</button>
     </form>
 
-    <div id="request" class="notice hidden">
-      <p id="requestMsg"></p>
-      <a id="requestLink" class="btn primary" target="_blank" rel="noopener">Request lookup on GitHub ↗</a>
-      <p class="hint">GitHub opens with the request filled in. Click <b>Create</b> (or <b>Submit new issue</b>) and come back here. Your stats appear automatically, usually within 1–2 minutes.</p>
-    </div>
-    <div id="waiting" class="notice hidden"><span class="spinner"></span> <span id="waitMsg">Waiting for GitHub to fetch your stats…</span></div>
+    <div id="waiting" class="notice hidden"><span class="spinner"></span> <span id="waitMsg">Loading stats…</span></div>
     <div id="error" class="error hidden"></div>
   </section>
 
@@ -350,79 +345,29 @@
     $('refresh').classList.remove('hidden');
   }
 
-  // ---------- lookup via GitHub issue -> Action (uses the APEX_API_KEY secret) ----------
-  const REPO = 'Veekash2/Apex-Calculator';
-  // Must match the slug rule in .github/workflows/update-stats.yml
-  const slugOf = name => name.replace(/[A-Z]/g, c => c.toLowerCase()).replace(/[^a-z0-9_-]/gu, '_');
+  // ---------- live lookup via serverless function (holds APEX_API_KEY) ----------
+  // On Vercel the function is same-origin. On GitHub Pages, call the Vercel deployment.
+  const VERCEL_URL = 'https://apex-calculator.vercel.app';
+  const API = location.hostname.endsWith('github.io') ? VERCEL_URL + '/api/stats' : '/api/stats';
   const show = (id, on) => $(id).classList.toggle('hidden', !on);
-  let pollTimer = null;
-
-  async function fetchStats(player, platform) {
-    const res = await fetch(`stats/${platform}/${slugOf(player)}.json?t=${Date.now()}`, { cache: 'no-store' });
-    if (res.status === 404) return null;
-    if (!res.ok) throw new Error(`Could not load stats (${res.status}).`);
-    return res.json();
-  }
-
-  function issueUrl(player, platform) {
-    const title = `lookup:${platform}:${player}`;
-    const body = 'Stats lookup requested from the Apex Calculator site. Just submit this issue; it closes itself when done.';
-    return `https://github.com/${REPO}/issues/new?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}`;
-  }
-
-  function askForLookup(player, platform, msg) {
-    $('requestMsg').innerHTML = '';
-    $('requestMsg').append(msg);
-    $('requestLink').href = issueUrl(player, platform);
-    show('request', true);
-    $('requestLink').onclick = () => startPolling(player, platform);
-  }
-
-  function startPolling(player, platform) {
-    const since = Date.now() - 5000;
-    const deadline = Date.now() + 5 * 60 * 1000;
-    show('request', false); show('error', false); show('waiting', true);
-    $('waitMsg').textContent = `Waiting for GitHub to fetch stats for ${player}…`;
-    clearInterval(pollTimer);
-    pollTimer = setInterval(async () => {
-      try {
-        const d = await fetchStats(player, platform);
-        if (d && d.lastErrorAt && Date.parse(d.lastErrorAt) > since) {
-          clearInterval(pollTimer); show('waiting', false);
-          showError(`Lookup failed: ${d.lastError}. Check the profile name and platform.`);
-          if (d.global) render(d);
-          return;
-        }
-        if (d && d.global && Date.parse(d.updated) > since) {
-          clearInterval(pollTimer); show('waiting', false); render(d);
-          return;
-        }
-      } catch { /* keep waiting */ }
-      if (Date.now() > deadline) {
-        clearInterval(pollTimer); show('waiting', false);
-        showError('Still no stats after 5 minutes. Make sure you submitted the issue on GitHub, then check the Actions tab.');
-      }
-    }, 10000);
-  }
-
   function showError(msg) { $('error').textContent = msg; show('error', true); }
 
   async function lookup(player, platform) {
-    clearInterval(pollTimer);
-    show('request', false); show('error', false); show('waiting', false);
+    show('error', false); show('waiting', true);
+    $('waitMsg').textContent = `Loading stats for ${player}…`;
     try {
-      const d = await fetchStats(player, platform);
-      if (d && d.global) {
-        render(d);
-      } else {
-        $('dash').classList.add('hidden');
-        $('refresh').classList.add('hidden');
-        $('updated').textContent = '';
-        askForLookup(player, platform, d && d.lastError
-          ? `The last lookup for "${player}" failed (${d.lastError}). Check the name and try again.`
-          : `"${player}" hasn't been looked up yet.`);
-      }
-    } catch (e) { showError(e.message); }
+      const res = await fetch(`${API}?player=${encodeURIComponent(player)}&platform=${encodeURIComponent(platform)}`);
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok || !d.global) throw new Error(d.error || `Lookup failed (${res.status}).`);
+      render(d);
+    } catch (e) {
+      $('dash').classList.add('hidden');
+      $('refresh').classList.add('hidden');
+      $('updated').textContent = '';
+      showError(e.message === 'Failed to fetch' ? 'Could not reach the stats server. Try again shortly.' : e.message);
+    } finally {
+      show('waiting', false);
+    }
   }
 
   $('player').value = store.get('player', '');
@@ -435,10 +380,8 @@
     lookup(player, platform);
   });
   $('refresh').onclick = () => {
-    const player = store.get('player', ''), platform = store.get('platform', 'PC');
-    if (!player) return;
-    window.open(issueUrl(player, platform), '_blank', 'noopener');
-    startPolling(player, platform);
+    const player = store.get('player', '');
+    if (player) lookup(player, store.get('platform', 'PC'));
   };
   function load() {
     const player = store.get('player', '');
