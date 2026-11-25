@@ -1,0 +1,508 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Player Analysis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0e11; --panel: #16181d; --panel-2: #1d2027; --line: #2a2e37;
+    --fg: #eef0f3; --muted: #8b919c; --accent: #e5323a; --accent-soft: rgba(229,50,58,.14);
+    --gold: #f1b434; --good: #3ccf8e; --warn: #f1b434; --bad: #ff6b72; --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--fg); }
+  body { font: 15px/1.55 Inter, system-ui, sans-serif; min-height: 100vh;
+    background-image: radial-gradient(1200px 500px at 80% -10%, rgba(229,50,58,.12), transparent 60%); }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 28px 16px 64px; }
+  h1, h2, h3, .display { font-family: Rajdhani, sans-serif; letter-spacing: .02em; margin: 0; }
+  a { color: var(--fg); }
+  header.top { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+  .brand { display: flex; align-items: center; gap: 10px; font-family: Rajdhani, sans-serif; font-weight: 700; font-size: 22px; text-transform: uppercase; text-decoration: none; }
+  .brand .mark { width: 30px; height: 30px; background: var(--accent); clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+  .brand span { color: var(--accent); }
+  .btn { font: 600 14px Inter, sans-serif; border: 1px solid var(--line); background: var(--panel-2); color: var(--fg);
+    padding: 8px 14px; border-radius: 10px; cursor: pointer; text-decoration: none; display: inline-block; }
+  .btn:hover { border-color: #3a3f4b; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; }
+  .grid { display: grid; gap: 16px; margin-top: 16px; }
+  .g2 { grid-template-columns: 1fr 1fr; } .g3 { grid-template-columns: repeat(3, 1fr); } .g4 { grid-template-columns: repeat(4, 1fr); }
+  .k { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  .v { font-family: Rajdhani, sans-serif; font-weight: 700; font-size: 32px; line-height: 1.1; margin-top: 4px; }
+  .s { color: var(--muted); font-size: 13px; }
+  .muted { color: var(--muted); }
+  h2 { font-size: 26px; font-weight: 700; margin: 36px 0 4px; }
+  h2 + p.lead { margin: 0 0 4px; color: var(--muted); }
+  h3 { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+  .tag { display: inline-block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; padding: 3px 8px; border-radius: 999px;
+    border: 1px solid var(--line); color: var(--muted); vertical-align: 2px; margin-left: 6px; }
+  .tag.est { color: var(--gold); border-color: rgba(241,180,52,.4); }
+
+  /* hero */
+  .hero { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+  .hero img { width: 72px; height: 72px; border-radius: 12px; background: var(--panel-2); object-fit: cover; }
+  .hero h1 { font-size: 40px; line-height: 1; }
+  .role-badge { display: inline-flex; align-items: center; gap: 8px; margin-top: 8px; padding: 6px 12px; border-radius: 999px;
+    background: var(--accent-soft); border: 1px solid rgba(229,50,58,.4); font-weight: 600; font-size: 14px; }
+
+  /* meters */
+  .meter { margin: 14px 0; }
+  .meter .row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .meter .name { font-weight: 600; }
+  .meter .val { font-family: Rajdhani, sans-serif; font-weight: 700; font-size: 18px; }
+  .bar { position: relative; height: 10px; background: var(--panel-2); border-radius: 999px; margin-top: 6px; }
+  .bar .fill { position: absolute; inset: 0 auto 0 0; border-radius: 999px; background: var(--accent); }
+  .bar .avg { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--muted); border-radius: 1px; }
+  .meter .why { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .meter.locked .bar { background: repeating-linear-gradient(135deg, var(--panel-2) 0 6px, var(--panel) 6px 12px); }
+  .meter.locked .val { color: var(--muted); font-size: 14px; font-family: Inter, sans-serif; font-weight: 600; }
+
+  /* list items */
+  ul.points { list-style: none; padding: 0; margin: 0; }
+  ul.points li { display: flex; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); }
+  ul.points li:first-child { border-top: 0; }
+  .ico { flex: none; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; color: #0d0e11; margin-top: 1px; }
+  .ico.good { background: var(--good); } .ico.bad { background: var(--bad); } .ico.info { background: var(--muted); }
+
+  /* legend table */
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: right; padding: 10px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
+  td.legend { display: flex; align-items: center; gap: 10px; font-weight: 600; }
+  td.legend img { width: 28px; height: 28px; border-radius: 6px; background: var(--panel-2); }
+  .tbl-wrap { overflow-x: auto; }
+  .best { color: var(--gold); font-size: 12px; font-weight: 700; margin-left: 4px; }
+
+  /* rank ladder */
+  .ladder { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; margin: 16px 0 8px; }
+  .ladder div { text-align: center; padding: 10px 2px; border-radius: 8px; background: var(--panel-2); font-size: 12px; font-weight: 600; color: var(--muted); border: 2px solid transparent; }
+  .ladder div.cur { border-color: var(--muted); color: var(--fg); }
+  .ladder div.est { background: var(--accent); color: #fff; }
+  .ladder-key { display: flex; gap: 16px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+  .ladder-key i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 6px; }
+
+  /* shards */
+  .shards { display: flex; gap: 24px; align-items: center; flex-wrap: wrap; }
+  .shard-num { font-family: Rajdhani, sans-serif; font-weight: 700; font-size: 64px; line-height: 1; color: var(--accent); }
+  .counter { display: flex; gap: 8px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+  .counter input { width: 100px; text-align: center; font: 700 18px Rajdhani, sans-serif; color: var(--fg); background: var(--bg);
+    border: 1px solid var(--line); border-radius: 10px; padding: 6px; }
+  .pbar { height: 14px; background: var(--panel-2); border-radius: 999px; overflow: hidden; margin-top: 12px; }
+  .pbar div { height: 100%; background: linear-gradient(90deg, #b3242b, var(--accent)); border-radius: 999px; transition: width .6s; }
+
+  .unlock { margin-top: 16px; padding: 14px 16px; border-radius: 10px; background: var(--panel-2); border: 1px dashed var(--line); font-size: 14px; }
+  .unlock b { color: var(--gold); }
+  .error { color: #ff7b81; background: var(--accent-soft); border: 1px solid rgba(229,50,58,.35); padding: 12px 16px; border-radius: 10px; }
+  .loading { display: flex; align-items: center; gap: 10px; color: var(--muted); }
+  .spinner { width: 16px; height: 16px; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .hidden { display: none !important; }
+  footer { margin-top: 40px; color: var(--muted); font-size: 12px; text-align: center; }
+
+  @media (max-width: 820px) { .g3, .g4 { grid-template-columns: 1fr 1fr; } .g2 { grid-template-columns: 1fr; } .hero h1 { font-size: 32px; } }
+  @media (max-width: 480px) { .ladder { grid-template-columns: repeat(4, 1fr); } .shard-num { font-size: 48px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="brand" href="./"><div class="mark"></div>Apex <span>Calculator</span></a>
+    <a class="btn" href="./">← Dashboard</a>
+  </header>
+
+  <div id="status" class="panel loading"><div class="spinner"></div><span>Loading analysis…</span></div>
+
+  <main id="report" class="hidden">
+    <!-- Overview -->
+    <section class="panel hero">
+      <img id="avatar" alt="">
+      <div style="flex:1;min-width:220px">
+        <div class="k">Player analysis</div>
+        <h1 id="pName">—</h1>
+        <div class="role-badge" id="roleBadge">—</div>
+      </div>
+      <div class="muted" style="font-size:13px;text-align:right" id="dataNote"></div>
+    </section>
+
+    <div class="unlock" id="scopeNote" style="margin-top:16px"></div>
+
+    <section class="grid g4" id="tiles"></section>
+
+    <!-- Red shards -->
+    <h2>Red shards (Heirloom)</h2>
+    <p class="lead">You're guaranteed Heirloom shards by your 500th Apex Pack opened.</p>
+    <section class="panel">
+      <div class="shards">
+        <div>
+          <div class="shard-num" id="shardLeft">—</div>
+          <div class="s">packs to go</div>
+        </div>
+        <div style="flex:1;min-width:240px">
+          <div class="k">Packs opened (enter yours)</div>
+          <div class="counter">
+            <button class="btn" type="button" id="dec">−</button>
+            <input id="opened" type="number" min="0" max="9999" value="0" aria-label="Packs opened">
+            <button class="btn" type="button" id="inc">+</button>
+            <button class="btn" type="button" id="useLevel">Use level packs (—)</button>
+          </div>
+          <div class="pbar"><div id="shardBar" style="width:0"></div></div>
+          <div class="s" style="margin-top:8px" id="shardNote"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Squad value -->
+    <h2>Your value in the squad</h2>
+    <p class="lead">How your numbers translate into a role. Grey marks show a typical player.</p>
+    <section class="grid g2">
+      <div class="panel" id="meters"></div>
+      <div class="panel">
+        <h3>Clean-up &amp; kill stealing <span class="tag est">Estimate</span></h3>
+        <div id="cleanup"></div>
+      </div>
+    </section>
+
+    <!-- Strengths & weaknesses -->
+    <h2>Strengths &amp; weaknesses</h2>
+    <section class="grid g2">
+      <div class="panel"><h3>Strengths</h3><ul class="points" id="strengths"></ul></div>
+      <div class="panel"><h3>Weaknesses</h3><ul class="points" id="weaknesses"></ul></div>
+    </section>
+
+    <!-- Legends -->
+    <h2>Legends</h2>
+    <p class="lead" id="legendLead"></p>
+    <section class="panel">
+      <div class="tbl-wrap"><table id="legendTable"></table></div>
+      <div id="legendUnlock"></div>
+    </section>
+
+    <!-- Rank -->
+    <h2>Rank estimate <span class="tag est">Estimate</span></h2>
+    <p class="lead">What rank your stats suggest, compared with where you are now.</p>
+    <section class="panel">
+      <div class="ladder" id="ladder"></div>
+      <div class="ladder-key"><span><i style="background:var(--accent)"></i>Estimated from stats</span><span><i style="border:2px solid var(--muted)"></i>Current ranked</span></div>
+      <ul class="points" id="rankWhy" style="margin-top:12px"></ul>
+      <div id="rankUnlock"></div>
+    </section>
+
+    <!-- How to get more -->
+    <h2>Unlock deeper analysis</h2>
+    <section class="panel">
+      <p style="margin-top:0">The stats API only sees the <b>trackers equipped on your legends' banners</b>. Equip these in game (Legends → pick a legend → Banner → Trackers), then open a lobby so they sync:</p>
+      <ul class="points" id="todo"></ul>
+    </section>
+  </main>
+
+  <footer>Data from the Apex Legends Status API. Estimates are rough guides based on lifetime banner trackers, not match history. Not affiliated with EA or Respawn.</footer>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem('apexcalc.' + k); return v === null ? d : v; } catch { return d; } },
+    set(k, v) { try { localStorage.setItem('apexcalc.' + k, v); } catch {} },
+  };
+  const fmt = (n, dp = 0) => (n == null || !isFinite(n)) ? '—' : Number(n).toLocaleString(undefined, { maximumFractionDigits: dp, minimumFractionDigits: dp });
+  const pct = (n, dp = 0) => (n == null || !isFinite(n)) ? '—' : (n * 100).toFixed(dp) + '%';
+  const clamp = (x, a = 0, b = 100) => Math.max(a, Math.min(b, x));
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  const VERCEL_URL = 'https://apex-calculator-veekash.vercel.app';
+  const API = location.hostname.endsWith('github.io') ? VERCEL_URL + '/api/stats' : '/api/stats';
+
+  // ---- level-pack schedule (same as dashboard) ----
+  const isPackLevel = l => (l >= 2 && l <= 20) || (l >= 22 && l <= 300 && l % 2 === 0) || (l >= 305 && l <= 500 && l % 5 === 0);
+  const levelPacks = level => { let n = 0; for (let l = 2; l <= Math.min(level, 500); l++) if (isPackLevel(l)) n++; return n; };
+
+  // ---- tracker matching (API tracker names vary slightly) ----
+  const METRICS = {
+    kills:     n => /^(br )?kills$/.test(n),
+    damage:    n => /^(br )?damage( done)?$/.test(n),
+    klKills:   n => /kill ?leader/.test(n),
+    games:     n => /(games|matches) played/.test(n),
+    wins:      n => /^(br )?wins$/.test(n),
+    top3:      n => /top ?(3|three)/.test(n),
+    knocks:    n => /knock/.test(n),
+    revives:   n => /revive/.test(n),
+    respawns:  n => /respawn/.test(n),
+    headshots: n => /headshot/.test(n),
+    finishers: n => /finisher/.test(n),
+    winKills:  n => /winning kills/.test(n),
+  };
+  const TRACKER_NAME = { games: 'Games Played', wins: 'Wins', top3: 'Top 3 Finishes', knocks: 'Knockdowns', revives: 'Revives',
+    headshots: 'Headshots', damage: 'Damage', kills: 'Kills', klKills: 'Kills as Kill Leader', respawns: 'Respawns', finishers: 'Finishers' };
+
+  function legendStats(l) {
+    const s = {};
+    for (const t of (l.data || [])) {
+      const n = String(t.name || '').toLowerCase().trim();
+      const v = Number(t.value);
+      if (!isFinite(v)) continue;
+      for (const [k, test] of Object.entries(METRICS)) if (test(n)) { s[k] = (s[k] || 0) + v; break; }
+    }
+    return s;
+  }
+
+  // Typical-player reference points (rough community averages, per game unless noted)
+  const TYPICAL = { kpg: 0.85, dpg: 420, dpk: 260, klShare: 0.06, rpg: 0.5, top3: 0.2, winRate: 0.04, hsRate: 0.12 };
+
+  // Rank thresholds for the estimate (rough): Rookie..Predator
+  const TIERS = ['Rookie', 'Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond', 'Master', 'Predator'];
+  const KPG_T = [0, 0.4, 0.6, 0.85, 1.1, 1.5, 2.2, 3.0];
+  const DPG_T = [0, 200, 300, 420, 560, 750, 1000, 1400];
+  const DPK_T = [Infinity, 420, 360, 310, 280, 250, 225, 200]; // lower damage-per-kill = more efficient finishing
+  const tierFrom = (v, t, lowerIsBetter = false) => {
+    let idx = 0;
+    for (let i = 0; i < t.length; i++) if (lowerIsBetter ? v <= t[i] : v >= t[i]) idx = i;
+    return idx;
+  };
+
+  function analyse(d) {
+    const g = d.global || {};
+    const all = (d.legends && d.legends.all) || {};
+    const legends = Object.entries(all)
+      .map(([name, l]) => ({ name, icon: l.icon, s: legendStats(l) }))
+      .filter(l => Object.keys(l.s).length);
+
+    const T = {};
+    for (const l of legends) for (const [k, v] of Object.entries(l.s)) T[k] = (T[k] || 0) + v;
+    if (!T.kills && d.total && d.total.kills) T.kills = Number(d.total.kills.value);
+    if (!T.damage && d.total && d.total.damage) T.damage = Number(d.total.damage.value);
+
+    const M = {
+      dpk: T.kills && T.damage ? T.damage / T.kills : null,
+      klShare: T.kills && T.klKills != null ? T.klKills / T.kills : null,
+      kpg: T.games && T.kills != null ? T.kills / T.games : null,
+      dpg: T.games && T.damage != null ? T.damage / T.games : null,
+      winRate: T.games && T.wins != null ? T.wins / T.games : null,
+      top3: T.games && T.top3 != null ? T.top3 / T.games : null,
+      rpg: T.games && T.revives != null ? T.revives / T.games : null,
+      hsRate: T.kills && T.headshots != null ? T.headshots / T.kills : null,
+      cleanupKills: T.knocks != null && T.kills != null ? Math.max(0, T.kills - T.knocks) : null,
+      killPerKnock: T.knocks ? T.kills / T.knocks : null,
+    };
+    return { g, legends, T, M };
+  }
+
+  // ---------- render ----------
+  function render(d) {
+    const { g, legends, T, M } = analyse(d);
+    $('pName').textContent = g.name || '—';
+    if (g.avatar) $('avatar').src = g.avatar; else $('avatar').classList.add('hidden');
+    $('dataNote').innerHTML = `${legends.length} legend${legends.length === 1 ? '' : 's'} with trackers<br>Updated ${new Date(d.updated || Date.now()).toLocaleString()}`;
+
+    // scope: which legends these numbers actually cover
+    const names = legends.map(l => l.name);
+    const listed = names.length ? names.join(', ') : 'none yet';
+    $('scopeNote').innerHTML = `<b>These are not your all-time totals.</b> Kills, damage and other stats below are lifetime numbers for <b>${esc(listed)}</b> only, the legend${names.length === 1 ? '' : 's'} with trackers on ${names.length === 1 ? 'its' : 'their'} banner when the API last saw you. The API can't read your full career stats. To include other legends, equip their Kills and Damage trackers in game and open a lobby.`;
+    const scopeLabel = names.length === 1 ? `${names[0]} only` : `${names.length} tracked legends`;
+
+    // tiles
+    const rank = g.rank || {};
+    const als = typeof rank.ALStopPercent === 'number' ? rank.ALStopPercent : null;
+    const tiles = [
+      ['Level', fmt(g.level), g.levelPrestige ? `Prestige ${g.levelPrestige}` : `${g.toNextLevelPercent ?? '—'}% to next`],
+      ['Ranked', rank.rankName ? `${rank.rankName}${rank.rankDiv ? ' ' + rank.rankDiv : ''}` : 'Unranked',
+        als != null ? `Top ${als.toFixed(1)}% · ${fmt(rank.rankScore)} RP` : `${fmt(rank.rankScore)} RP`],
+      [`Kills (${scopeLabel})`, fmt(T.kills), M.kpg != null ? `${fmt(M.kpg, 2)} per game` : 'Not all-time'],
+      [`Damage (${scopeLabel})`, fmt(T.damage), M.dpk != null ? `${fmt(M.dpk)} per kill · not all-time` : 'Not all-time'],
+    ];
+    $('tiles').innerHTML = tiles.map(([k, v, s]) => `<div class="panel"><div class="k">${k}</div><div class="v">${esc(v)}</div><div class="s">${esc(s)}</div></div>`).join('');
+
+    renderShards(g.level || 0);
+
+    // ---- squad role meters (0-100 scores; typical = 50ish marker) ----
+    const meters = [
+      { key: 'kpg', name: 'Fragging', val: M.kpg, show: v => `${fmt(v, 2)} kills/game`, score: v => clamp(v / 2.5 * 100), typ: TYPICAL.kpg,
+        why: 'Kills per game.', need: 'games' },
+      { key: 'dpg', name: 'Damage output', val: M.dpg, show: v => `${fmt(v)} dmg/game`, score: v => clamp(v / 1200 * 100), typ: TYPICAL.dpg,
+        why: 'Damage per game.', need: 'games' },
+      { key: 'dpk', name: 'Finishing efficiency', val: M.dpk, show: v => `${fmt(v)} dmg/kill`, score: v => clamp(100 - (v - 150) / 3), typ: TYPICAL.dpk,
+        why: 'Lower damage per kill means you convert damage into kills (or pick up knocks).' },
+      { key: 'klShare', name: 'Snowballing', val: M.klShare, show: v => `${pct(v, 1)} of kills as kill leader`, score: v => clamp(v / 0.2 * 100), typ: TYPICAL.klShare,
+        why: 'How often your kills come while you are the kill leader.' },
+      { key: 'rpg', name: 'Support', val: M.rpg, show: v => `${fmt(v, 2)} revives/game`, score: v => clamp(v / 1.5 * 100), typ: TYPICAL.rpg,
+        why: 'Revives per game.', need: 'revives' },
+      { key: 'top3', name: 'Survival', val: M.top3, show: v => `${pct(v)} top-3 rate`, score: v => clamp(v / 0.45 * 100), typ: TYPICAL.top3,
+        why: 'How often your squad reaches the final three.', need: 'top3' },
+    ];
+    const scored = [];
+    $('meters').innerHTML = '<h3>Role profile</h3>' + meters.map(m => {
+      if (m.val == null) {
+        const needs = m.need === 'games' ? 'Games Played' : TRACKER_NAME[m.need] + (m.key === 'kpg' || m.key === 'dpg' ? '' : ' + Games Played');
+        return `<div class="meter locked"><div class="row"><span class="name">${m.name}</span><span class="val">Equip ${esc(needs)}</span></div><div class="bar"></div></div>`;
+      }
+      const sc = m.score(m.val), typ = m.score(m.typ);
+      scored.push({ ...m, sc, typSc: typ });
+      return `<div class="meter"><div class="row"><span class="name">${m.name}</span><span class="val">${esc(m.show(m.val))}</span></div>
+        <div class="bar" title="You: ${Math.round(sc)}/100 · typical: ${Math.round(typ)}/100"><div class="fill" style="width:${sc}%"></div><div class="avg" style="left:${typ}%"></div></div>
+        <div class="why">${m.why} Typical: ${esc(m.show(m.typ))}.</div></div>`;
+    }).join('');
+
+    // role badge
+    const ROLE = { kpg: 'Entry fragger', dpg: 'Damage dealer', dpk: 'Closer', klShare: 'Snowballer', rpg: 'Support anchor', top3: 'Survivor' };
+    let role = 'Not enough data yet';
+    if (scored.length) {
+      const rel = scored.map(m => ({ key: m.key, d: m.sc - m.typSc })).sort((a, b) => b.d - a.d);
+      role = rel[0].d >= 0 ? ROLE[rel[0].key] : (M.dpk && M.dpk > TYPICAL.dpk ? 'Setter: softens targets for the team' : 'Team player');
+      if (rel[0].key === 'dpk' && rel[0].d < 0) role = 'Setter: softens targets for the team';
+    }
+    $('roleBadge').textContent = '★ ' + role;
+
+    // ---- clean-up / stealing ----
+    let cu = '';
+    if (M.cleanupKills != null) {
+      const share = T.kills ? M.cleanupKills / T.kills : 0;
+      cu = `<div class="v">${fmt(M.cleanupKills)}</div><div class="s">estimated clean-up kills (${pct(share)} of your kills)</div>
+        <p>You have <b>${fmt(T.kills)}</b> kills from <b>${fmt(T.knocks)}</b> knockdowns. Kills beyond your own knocks are usually finishing enemies a teammate knocked: clean-up or "stolen" kills.</p>
+        <p class="muted">${share > 0.25 ? 'That\'s a lot of clean-up. You\'re great at confirming kills, but make sure you\'re also starting fights.' : share > 0.1 ? 'A healthy mix of your own knocks and finishing teammates\' knocks.' : 'Most of your kills come from your own knocks. You\'re not a kill stealer.'}</p>`;
+    } else if (M.dpk != null) {
+      const idx = TYPICAL.dpk / M.dpk; // >1 = finishes with less damage than typical
+      const pctDiff = Math.round((M.dpk / TYPICAL.dpk - 1) * 100);
+      const verdict = idx >= 1.15 ? { label: 'Likely kill-stealer / closer', txt: `You deal about <b>${Math.abs(pctDiff)}% less damage per kill</b> than a typical player, which usually means you pick up a lot of kills on enemies others have already damaged or knocked.` }
+        : idx <= 0.85 ? { label: 'Setter, not a stealer', txt: `You deal about <b>${pctDiff}% more damage per kill</b> than a typical player. You soften enemies and your teammates often finish them, so <b>you're the one getting kills stolen</b>, not the stealer.` }
+        : { label: 'Balanced', txt: 'Your damage per kill is close to typical: a fair mix of your own kills and clean-up.' };
+      cu = `<div class="v">${esc(verdict.label)}</div><div class="s">Clean-up index ${idx.toFixed(2)} (1.00 = typical, higher = more clean-up)</div>
+        <p>${verdict.txt}</p>
+        <div class="unlock">For an actual clean-up kill count, equip the <b>Knockdowns</b> tracker on your main legend. Kills minus knockdowns ≈ kills you finished for teammates.</div>`;
+    } else {
+      cu = '<p class="muted">Equip <b>Kills</b>, <b>Damage</b> and <b>Knockdowns</b> trackers to measure this.</p>';
+    }
+    $('cleanup').innerHTML = cu;
+
+    // ---- strengths & weaknesses ----
+    const S = [], W = [];
+    for (const m of scored) {
+      const diff = m.sc - m.typSc;
+      const line = `<b>${m.name}</b>: ${esc(m.show(m.val))} vs typical ${esc(m.show(m.typ))}.`;
+      if (diff >= 8) S.push(line); else if (diff <= -8) W.push(line);
+    }
+    if (M.klShare != null && M.klShare >= 0.07) S.push(`<b>Closing out as kill leader</b>: ${fmt(T.klKills)} kills while holding kill leader shows you keep fighting when you're ahead.`);
+    if (M.hsRate != null) (M.hsRate >= TYPICAL.hsRate ? S : W).push(`<b>Aim</b>: ${pct(M.hsRate)} of kills have a matching headshot count (typical ~${pct(TYPICAL.hsRate)}).`);
+    if (als != null) {
+      const better = 100 - als;
+      (better >= 50 ? S : W).push(`<b>Ranked standing</b>: top ${als.toFixed(1)}% of ranked players this split, ahead of about ${better.toFixed(0)}% of them.`);
+    }
+    if (M.dpk != null && M.dpk > TYPICAL.dpk * 1.15) W.push('<b>Converting damage to kills</b>: you deal plenty of damage but teammates often finish your targets. Push knocked enemies faster, or swap to higher time-to-kill weapons up close.');
+    if (legends.length === 1) W.push(`<b>Legend pool</b>: all tracked stats are on ${esc(legends[0].name)}. Being solid on a second legend helps when yours is taken.`);
+    const li = (arr, cls, sym, empty) => arr.length ? arr.map(t => `<li><span class="ico ${cls}">${sym}</span><span>${t}</span></li>`).join('') : `<li><span class="ico info">i</span><span class="muted">${empty}</span></li>`;
+    $('strengths').innerHTML = li(S, 'good', '+', 'Nothing stands out above typical yet. More trackers will reveal strengths.');
+    $('weaknesses').innerHTML = li(W, 'bad', '−', 'No clear weaknesses in the tracked stats.');
+
+    // ---- legends table ----
+    const rows = legends.map(l => {
+      const s = l.s;
+      const score = (s.kills || 0) + (s.damage || 0) / 250 + (s.wins || 0) * 5;
+      return { ...l, score, dpk: s.kills && s.damage ? s.damage / s.kills : null, kpg: s.games ? (s.kills || 0) / s.games : null };
+    }).sort((a, b) => b.score - a.score);
+    const bestKpg = rows.filter(r => r.kpg != null && r.s.games >= 20).sort((a, b) => b.kpg - a.kpg)[0];
+    const best = bestKpg || rows[0];
+    $('legendLead').innerHTML = best
+      ? `Your best legend: <b>${esc(best.name)}</b> ${bestKpg ? `(highest kills per game, ${fmt(best.kpg, 2)})` : '(most kills and damage tracked)'}.`
+      : 'No legend trackers found yet.';
+    $('legendTable').innerHTML = `<thead><tr><th>Legend</th><th>Kills</th><th>Damage</th><th>Dmg / kill</th><th>Kill-leader kills</th><th>Games</th><th>Kills / game</th></tr></thead><tbody>` +
+      rows.map(r => `<tr><td class="legend">${r.icon ? `<img src="${esc(r.icon)}" alt="">` : ''}${esc(r.name)}${r === best ? '<span class="best">★ BEST</span>' : ''}</td>
+        <td>${fmt(r.s.kills)}</td><td>${fmt(r.s.damage)}</td><td>${fmt(r.dpk)}</td><td>${fmt(r.s.klKills)}</td><td>${fmt(r.s.games)}</td><td>${fmt(r.kpg, 2)}</td></tr>`).join('') + '</tbody>';
+    $('legendUnlock').innerHTML = rows.length <= 1
+      ? '<div class="unlock">Only one legend has trackers. Equip <b>Kills</b> and <b>Games Played</b> on the other legends you play to compare them and find your real best.</div>' : '';
+
+    // ---- rank estimate ----
+    const signals = [];
+    if (M.kpg != null) signals.push({ t: tierFrom(M.kpg, KPG_T), w: 2, txt: `Kills per game ${fmt(M.kpg, 2)}` });
+    if (M.dpg != null) signals.push({ t: tierFrom(M.dpg, DPG_T), w: 2, txt: `Damage per game ${fmt(M.dpg)}` });
+    if (M.dpk != null) signals.push({ t: tierFrom(M.dpk, DPK_T, true), w: 1, txt: `Damage per kill ${fmt(M.dpk)}` });
+    const curIdx = rank.rankName ? TIERS.findIndex(t => t.toLowerCase() === String(rank.rankName).toLowerCase()) : -1;
+    let estIdx = null;
+    if (signals.length) {
+      const w = signals.reduce((a, s) => a + s.w, 0);
+      estIdx = Math.round(signals.reduce((a, s) => a + s.t * s.w, 0) / w);
+      if (M.kpg == null && curIdx >= 0) estIdx = Math.round((estIdx + curIdx) / 2); // weak signal only: lean on actual rank
+    }
+    $('ladder').innerHTML = TIERS.map((t, i) => `<div class="${i === estIdx ? 'est' : ''} ${i === curIdx ? 'cur' : ''}">${t}</div>`).join('');
+    const why = signals.map(s => `<li><span class="ico info">i</span><span>${esc(s.txt)} looks like <b>${TIERS[s.t]}</b> level.</span></li>`);
+    if (curIdx >= 0) why.push(`<li><span class="ico info">i</span><span>You're currently <b>${esc(rank.rankName)} ${rank.rankDiv || ''}</b> with ${fmt(rank.rankScore)} RP${als != null ? `, top ${als.toFixed(1)}% this split` : ''}.</span></li>`);
+    if (estIdx != null) {
+      const msg = curIdx < 0 ? `Your stats suggest around <b>${TIERS[estIdx]}</b>.`
+        : estIdx > curIdx ? `Your stats suggest you could climb to about <b>${TIERS[estIdx]}</b>; you're likely under-ranked or haven't played many ranked games this split.`
+        : estIdx < curIdx ? `You're ranked above what these stats suggest (<b>${TIERS[estIdx]}</b>); team play and placement are carrying you.`
+        : `Your stats match your current rank: <b>${TIERS[estIdx]}</b>.`;
+      why.unshift(`<li><span class="ico good">★</span><span>${msg}</span></li>`);
+    }
+    $('rankWhy').innerHTML = why.join('');
+    $('rankUnlock').innerHTML = M.kpg == null
+      ? '<div class="unlock">This estimate is weak because <b>Games Played</b> isn\'t tracked. Equip it alongside Kills and Damage for a much more accurate rank estimate (kills and damage per game).</div>' : '';
+
+    // ---- unlock list ----
+    const want = ['games', 'knocks', 'revives', 'wins', 'top3', 'headshots'];
+    const missing = want.filter(k => T[k] == null);
+    const unlocks = { games: 'kills/damage per game, win rate and a proper rank estimate', knocks: 'your exact clean-up / stolen kill count', revives: 'your support score',
+      wins: 'win rate', top3: 'survival score', headshots: 'aim accuracy' };
+    $('todo').innerHTML = missing.length
+      ? missing.map(k => `<li><span class="ico info">+</span><span><b>${TRACKER_NAME[k]}</b> unlocks ${unlocks[k]}.</span></li>`).join('')
+      : '<li><span class="ico good">✓</span><span>You have all the key trackers. Nice.</span></li>';
+
+    $('status').classList.add('hidden');
+    $('report').classList.remove('hidden');
+  }
+
+  // ---------- red shards ----------
+  function renderShards(level) {
+    const lp = levelPacks(level);
+    const el = $('opened');
+    el.value = store.get('opened', '0');
+    $('useLevel').textContent = `Use level packs (${lp})`;
+    const upd = () => {
+      const n = Math.max(0, parseInt(el.value || '0', 10) || 0);
+      store.set('opened', String(n));
+      const left = Math.max(0, 500 - n);
+      $('shardLeft').textContent = left === 0 ? '0' : fmt(left);
+      $('shardBar').style.width = Math.min(100, n / 500 * 100) + '%';
+      const lvLeft = 199 - lp;
+      $('shardNote').innerHTML = left === 0
+        ? 'You\'ve hit 500. Heirloom shards should be guaranteed (or already unlocked).'
+        : `${fmt(n)} / 500 opened. Levelling to 500 gives you <b>${lvLeft}</b> more packs, ${lvLeft >= left ? 'enough on its own to reach red shards.' : `so you'd still need about <b>${fmt(left - lvLeft)}</b> from battle passes, events or purchases.`}`;
+    };
+    el.oninput = upd;
+    $('inc').onclick = () => { el.value = (+el.value || 0) + 1; upd(); };
+    $('dec').onclick = () => { el.value = Math.max(0, (+el.value || 0) - 1); upd(); };
+    $('useLevel').onclick = () => { el.value = lp; upd(); };
+    upd();
+  }
+
+  // ---------- load ----------
+  async function load() {
+    const q = new URLSearchParams(location.search);
+    let player = q.get('player') || store.get('player', '');
+    let platform = q.get('platform') || store.get('platform', 'STEAM');
+    if (!player) {
+      $('status').innerHTML = '<div>No player selected. <a href="./">Look up a player on the dashboard</a> first.</div>';
+      return;
+    }
+    let apiPlatform = platform, query = player;
+    if (platform === 'STEAM') {
+      const m = player.match(/7656119\d{10}/);
+      if (!m) { $('status').innerHTML = '<div class="error">Steam lookups need a 17-digit Steam ID. Go back to the dashboard and enter it.</div>'; return; }
+      query = m[0]; apiPlatform = 'PC';
+    }
+    try {
+      const res = await fetch(`${API}?player=${encodeURIComponent(query)}&platform=${encodeURIComponent(apiPlatform)}`);
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok || !d.global) throw new Error(d.error || `Lookup failed (${res.status})`);
+      render(d);
+    } catch (e) {
+      $('status').innerHTML = `<div class="error">${esc(e.message)}</div>`;
+    }
+  }
+  load();
+})();
+</script>
+</body>
+</html>

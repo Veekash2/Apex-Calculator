@@ -138,6 +138,7 @@
     <div style="display:flex;align-items:center;gap:12px">
       <span class="muted" id="updated" style="font-size:13px"></span>
       <button id="refresh" class="hidden" type="button" title="Fetch fresh stats now">↻ Refresh</button>
+      <a id="analysisLink" class="btn primary hidden" href="analysis.html">Full analysis →</a>
     </div>
   </header>
 
@@ -214,8 +215,8 @@
           <div class="mid"><div><div class="display" id="r2v">0</div><small>of 500</small></div></div>
         </div>
         <div>
-          <h3>Packs opened</h3>
-          <p><b id="r2left">—</b> to go for the guaranteed Heirloom</p>
+          <h3>Red shards (Heirloom)</h3>
+          <p><b id="r2left">—</b> packs until guaranteed red shards</p>
           <p class="muted" style="font-size:13px">The API doesn't track this, so enter it here. It's saved in this browser.</p>
           <div class="counter">
             <button type="button" id="dec">−</button>
@@ -347,6 +348,7 @@
     }
     $('dash').classList.remove('hidden');
     $('refresh').classList.remove('hidden');
+    $('analysisLink').classList.remove('hidden');
   }
 
   // ---------- live lookup via serverless function (holds APEX_API_KEY) ----------
@@ -387,6 +389,7 @@
     } catch (e) {
       $('dash').classList.add('hidden');
       $('refresh').classList.add('hidden');
+      $('analysisLink').classList.add('hidden');
       $('updated').textContent = '';
       showError(e.message === 'Failed to fetch' ? 'Could not reach the stats server. Try again shortly.' : e.message);
     } finally {
