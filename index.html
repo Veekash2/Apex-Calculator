@@ -1,24 +1,396 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Apex Calculator</title>
-  <style>
-    :root { --bg: #f6f6f4; --fg: #1d1d1b; --muted: #5c5c58; --accent: #c8102e; }
-    @media (prefers-color-scheme: dark) { :root { --bg: #151514; --fg: #ececea; --muted: #a3a39e; --accent: #ff4d5e; } }
-    body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.6 system-ui, sans-serif; }
-    main { max-width: 640px; margin: 0 auto; padding: 64px 16px; }
-    h1 { margin: 0 0 8px; font-size: 2rem; }
-    h1 span { color: var(--accent); }
-    p { color: var(--muted); }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Apex Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0e11;
+    --panel: #16181d;
+    --panel-2: #1d2027;
+    --line: #2a2e37;
+    --fg: #eef0f3;
+    --muted: #8b919c;
+    --accent: #e5323a;
+    --accent-soft: rgba(229, 50, 58, .14);
+    --gold: #f1b434;
+    --ok: #3ccf8e;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--fg); }
+  body { font: 15px/1.5 Inter, system-ui, sans-serif; min-height: 100vh;
+    background-image: radial-gradient(1200px 500px at 80% -10%, rgba(229,50,58,.12), transparent 60%); }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 28px 16px 64px; }
+  h1, h2, h3, .display { font-family: Rajdhani, sans-serif; letter-spacing: .02em; margin: 0; }
+  header.top { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-family: Rajdhani, sans-serif; font-weight: 700; font-size: 22px; text-transform: uppercase; }
+  .brand .mark { width: 30px; height: 30px; display: grid; place-items: center; background: var(--accent); clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+  .brand span { color: var(--accent); }
+  button, .btn { font: 600 14px Inter, sans-serif; border: 1px solid var(--line); background: var(--panel-2); color: var(--fg);
+    padding: 9px 14px; border-radius: 10px; cursor: pointer; transition: border-color .15s, background .15s; }
+  button:hover { border-color: #3a3f4b; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.primary:hover { background: #f0434b; }
+  button:disabled { opacity: .5; cursor: default; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; }
+
+  /* setup form */
+  form.setup { display: grid; grid-template-columns: 1.3fr .7fr 1.3fr auto; gap: 12px; align-items: end; }
+  label { display: block; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 6px; }
+  input, select { width: 100%; font: 500 15px Inter, sans-serif; color: var(--fg); background: var(--bg); border: 1px solid var(--line);
+    border-radius: 10px; padding: 10px 12px; outline: none; }
+  input:focus, select:focus { border-color: var(--accent); }
+  .hint { color: var(--muted); font-size: 13px; margin: 12px 0 0; }
+  .error { color: #ff7b81; background: var(--accent-soft); border: 1px solid rgba(229,50,58,.35); padding: 10px 14px; border-radius: 10px; margin-top: 14px; }
+
+  /* hero */
+  .hero { position: relative; overflow: hidden; border-radius: var(--radius); border: 1px solid var(--line); margin-top: 20px;
+    min-height: 220px; display: flex; align-items: flex-end; background: var(--panel); }
+  .hero .bg { position: absolute; inset: 0; background-size: cover; background-position: center 25%; opacity: .55; }
+  .hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(13,14,17,.95) 0%, rgba(13,14,17,.6) 55%, rgba(13,14,17,.2) 100%); }
+  .hero .inner { position: relative; z-index: 1; padding: 24px; display: flex; gap: 24px; align-items: flex-end; justify-content: space-between; width: 100%; flex-wrap: wrap; }
+  .hero h2 { font-size: 44px; line-height: 1; font-weight: 700; }
+  .tag { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em;
+    color: var(--muted); background: rgba(255,255,255,.06); border: 1px solid var(--line); padding: 4px 10px; border-radius: 999px; margin-right: 6px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #555; }
+  .dot.on { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+  .rank { display: flex; align-items: center; gap: 12px; }
+  .rank img { width: 64px; height: 64px; object-fit: contain; }
+  .rank .display { font-size: 24px; font-weight: 700; }
+
+  /* grid */
+  .grid { display: grid; gap: 16px; margin-top: 16px; }
+  .g2 { grid-template-columns: 1fr 1fr; }
+  .g4 { grid-template-columns: repeat(4, 1fr); }
+  .stat .k { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  .stat .v { font-family: Rajdhani, sans-serif; font-weight: 700; font-size: 34px; line-height: 1.1; margin-top: 4px; }
+  .stat .s { color: var(--muted); font-size: 13px; }
+
+  /* progress cards */
+  .prog { display: flex; gap: 22px; align-items: center; }
+  .ring { position: relative; width: 132px; height: 132px; flex: none; }
+  .ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .ring circle { fill: none; stroke-width: 10; }
+  .ring .track { stroke: var(--panel-2); }
+  .ring .bar { stroke-linecap: round; transition: stroke-dashoffset .8s ease; }
+  .ring .mid { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; }
+  .ring .mid .display { font-size: 30px; font-weight: 700; line-height: 1; }
+  .ring .mid small { color: var(--muted); font-size: 12px; }
+  .prog h3 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+  .prog p { margin: 2px 0; color: var(--muted); }
+  .prog p b { color: var(--fg); font-weight: 600; }
+  .counter { display: flex; gap: 8px; align-items: center; margin-top: 12px; }
+  .counter input { width: 90px; text-align: center; font-family: Rajdhani, sans-serif; font-weight: 700; font-size: 18px; padding: 6px; }
+  .counter button { padding: 6px 12px; }
+
+  /* level timeline */
+  .timeline { margin-top: 16px; }
+  .tl-bar { position: relative; height: 12px; background: var(--panel-2); border-radius: 999px; overflow: hidden; margin: 14px 0 8px; }
+  .tl-fill { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #b3242b, var(--accent)); border-radius: 999px; transition: width .8s ease; }
+  .tl-seg { display: grid; grid-template-columns: 19fr 140fr 40fr; gap: 6px; }
+  .tl-seg div { font-size: 12px; color: var(--muted); border-top: 2px solid var(--line); padding-top: 6px; }
+  .tl-seg div.done { border-color: var(--accent); color: var(--fg); }
+
+  /* legend stats */
+  .legend-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; margin-top: 12px; }
+  .legend-stats .stat { background: var(--panel-2); border-radius: 10px; padding: 12px 14px; }
+  .legend-stats .stat .v { font-size: 26px; }
+  .section-title { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+  .section-title h3 { font-size: 22px; font-weight: 700; }
+  .muted { color: var(--muted); }
+  footer { margin-top: 32px; color: var(--muted); font-size: 12px; text-align: center; }
+  footer a { color: var(--muted); }
+  .hidden { display: none !important; }
+  .loading { opacity: .6; pointer-events: none; }
+
+  @media (max-width: 820px) {
+    form.setup { grid-template-columns: 1fr 1fr; }
+    .g4 { grid-template-columns: 1fr 1fr; }
+    .g2 { grid-template-columns: 1fr; }
+    .hero h2 { font-size: 34px; }
+  }
+  @media (max-width: 480px) {
+    form.setup { grid-template-columns: 1fr; }
+    .prog { flex-direction: column; align-items: flex-start; }
+    .tl-seg div { font-size: 10px; }
+  }
+</style>
 </head>
 <body>
-  <main>
-    <h1><span>Apex</span> Calculator</h1>
-    <p>Personal tool to check my Apex Legends account level and calculate how many Apex Packs I have left until level 500.</p>
-    <p>Uses the Apex Legends Status API to look up player stats. Non-commercial, single user, only a few requests a day.</p>
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><div class="mark"></div>Apex <span>Calculator</span></div>
+    <div>
+      <button id="refresh" class="hidden" title="Reload stats">↻ Refresh</button>
+      <button id="editBtn" class="hidden">Change player</button>
+    </div>
+  </header>
+
+  <section id="setupPanel" class="panel">
+    <form class="setup" id="setup">
+      <div>
+        <label for="player">In-game name</label>
+        <input id="player" required autocomplete="off" placeholder="e.g. YourName">
+      </div>
+      <div>
+        <label for="platform">Platform</label>
+        <select id="platform">
+          <option value="PC">PC</option>
+          <option value="PS4">PlayStation</option>
+          <option value="X1">Xbox</option>
+          <option value="SWITCH">Switch</option>
+        </select>
+      </div>
+      <div>
+        <label for="apikey">API key</label>
+        <input id="apikey" type="password" required autocomplete="off" placeholder="From apexlegendsapi.com">
+      </div>
+      <button class="primary" type="submit" id="go">Load stats</button>
+    </form>
+    <p class="hint">Your API key is saved only in this browser (localStorage) and sent only to the Apex Legends Status API. It is never stored on GitHub.</p>
+    <div id="error" class="error hidden"></div>
+  </section>
+
+  <main id="dash" class="hidden">
+    <section class="hero">
+      <div class="bg" id="heroBg"></div>
+      <div class="inner">
+        <div>
+          <div style="margin-bottom:10px">
+            <span class="tag" id="platTag">PC</span>
+            <span class="tag"><span class="dot" id="onlineDot"></span><span id="onlineTxt">Offline</span></span>
+          </div>
+          <h2 id="pName">—</h2>
+          <div class="muted" id="pSub" style="margin-top:6px">—</div>
+        </div>
+        <div class="rank">
+          <img id="rankImg" alt="" class="hidden">
+          <div>
+            <div class="muted" style="font-size:12px;text-transform:uppercase;letter-spacing:.06em;font-weight:600">Ranked</div>
+            <div class="display" id="rankName">—</div>
+            <div class="muted" id="rankScore">—</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid g4">
+      <div class="panel stat"><div class="k">Account level</div><div class="v" id="sLevel">—</div><div class="s" id="sLevelSub">—</div></div>
+      <div class="panel stat"><div class="k">Prestige</div><div class="v" id="sPrestige">—</div><div class="s">Level resets after 500</div></div>
+      <div class="panel stat"><div class="k">Battle pass</div><div class="v" id="sBP">—</div><div class="s">Current season</div></div>
+      <div class="panel stat"><div class="k">Next level pack</div><div class="v" id="sNext">—</div><div class="s" id="sNextSub">—</div></div>
+    </section>
+
+    <section class="grid g2">
+      <div class="panel prog">
+        <div class="ring">
+          <svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="52"/><circle class="bar" id="ring1" cx="60" cy="60" r="52" stroke="var(--accent)"/></svg>
+          <div class="mid"><div><div class="display" id="r1v">0</div><small>of 199</small></div></div>
+        </div>
+        <div>
+          <h3>Level-up packs</h3>
+          <p><b id="r1left">—</b> packs left until level 500</p>
+          <p>Earned <b id="r1earned">—</b> from levelling so far</p>
+        </div>
+      </div>
+
+      <div class="panel prog">
+        <div class="ring">
+          <svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="52"/><circle class="bar" id="ring2" cx="60" cy="60" r="52" stroke="var(--gold)"/></svg>
+          <div class="mid"><div><div class="display" id="r2v">0</div><small>of 500</small></div></div>
+        </div>
+        <div>
+          <h3>Packs opened</h3>
+          <p><b id="r2left">—</b> to go for the guaranteed Heirloom</p>
+          <p class="muted" style="font-size:13px">The API doesn't track this. Find it in-game under Store → Apex Packs, then enter it here.</p>
+          <div class="counter">
+            <button type="button" id="dec">−</button>
+            <input id="opened" type="number" min="0" max="9999" value="0" aria-label="Packs opened">
+            <button type="button" id="inc">+</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel timeline">
+      <div class="section-title"><h3>Road to 500</h3><span class="muted" id="tlPct">—</span></div>
+      <div class="tl-bar"><div class="tl-fill" id="tlFill" style="width:0"></div></div>
+      <div class="tl-seg">
+        <div id="seg1">Lv 2–20 · every level · 19</div>
+        <div id="seg2">Lv 22–300 · every 2 levels · 140</div>
+        <div id="seg3">Lv 305–500 · every 5 · 40</div>
+      </div>
+    </section>
+
+    <section class="panel" style="margin-top:16px">
+      <div class="section-title"><h3 id="legendTitle">Selected legend</h3><span class="muted">Trackers equipped on banner</span></div>
+      <div class="legend-stats" id="legendStats"></div>
+    </section>
   </main>
+
+  <footer>Data from the <a href="https://apexlegendsapi.com" target="_blank" rel="noopener">Apex Legends Status API</a>. Pack schedule from EA. Not affiliated with EA or Respawn.</footer>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem('apexcalc.' + k); return v === null ? d : v; } catch { return d; } },
+    set(k, v) { try { localStorage.setItem('apexcalc.' + k, v); } catch {} },
+  };
+
+  // Level-up pack schedule (EA): 2-20 every level, 22-300 every 2, 305-500 every 5
+  const isPackLevel = l => (l >= 2 && l <= 20) || (l >= 22 && l <= 300 && l % 2 === 0) || (l >= 305 && l <= 500 && l % 5 === 0);
+  const PACK_LEVELS = Array.from({ length: 499 }, (_, i) => i + 2).filter(isPackLevel); // 199
+
+  const C = 2 * Math.PI * 52;
+  function setRing(el, frac) {
+    el.style.strokeDasharray = C;
+    el.style.strokeDashoffset = C * (1 - Math.max(0, Math.min(1, frac)));
+  }
+  const fmt = n => (n == null || n === '' || isNaN(n)) ? '—' : Number(n).toLocaleString();
+
+  // ---------- packs opened (manual) ----------
+  const openedEl = $('opened');
+  openedEl.value = store.get('opened', '0');
+  function renderOpened() {
+    const n = Math.max(0, parseInt(openedEl.value || '0', 10) || 0);
+    store.set('opened', String(n));
+    $('r2v').textContent = fmt(n);
+    $('r2left').textContent = n >= 500 ? 'Reached —' : fmt(500 - n);
+    setRing($('ring2'), n / 500);
+  }
+  openedEl.addEventListener('input', renderOpened);
+  $('inc').onclick = () => { openedEl.value = (+openedEl.value || 0) + 1; renderOpened(); };
+  $('dec').onclick = () => { openedEl.value = Math.max(0, (+openedEl.value || 0) - 1); renderOpened(); };
+
+  // ---------- render ----------
+  function render(d) {
+    const g = d.global || {}, rt = d.realtime || {}, legend = (d.legends && d.legends.selected) || {};
+    const level = parseInt(g.level, 10) || 0;
+    const prestige = parseInt(g.levelPrestige, 10) || 0;
+
+    $('pName').textContent = g.name || '—';
+    $('platTag').textContent = ({ PC: 'PC', PS4: 'PlayStation', X1: 'Xbox', SWITCH: 'Switch' })[g.platform] || g.platform || '—';
+    const online = rt.isOnline === 1;
+    $('onlineDot').classList.toggle('on', online);
+    $('onlineTxt').textContent = rt.currentStateAsText || (online ? 'Online' : 'Offline');
+    $('pSub').textContent = legend.LegendName ? `Playing ${legend.LegendName}` : '';
+
+    const banner = legend.ImgAssets && (legend.ImgAssets.banner || legend.ImgAssets.icon);
+    $('heroBg').style.backgroundImage = banner ? `url("${encodeURI(banner)}")` : '';
+
+    const rank = g.rank || {};
+    $('rankName').textContent = rank.rankName ? `${rank.rankName}${rank.rankDiv ? ' ' + rank.rankDiv : ''}` : 'Unranked';
+    $('rankScore').textContent = rank.rankScore != null ? `${fmt(rank.rankScore)} RP` : '';
+    if (rank.rankImg) { $('rankImg').src = rank.rankImg; $('rankImg').classList.remove('hidden'); } else $('rankImg').classList.add('hidden');
+
+    $('sLevel').textContent = fmt(level);
+    $('sLevelSub').textContent = g.toNextLevelPercent != null ? `${g.toNextLevelPercent}% to next level` : '';
+    $('sPrestige').textContent = prestige;
+    $('sBP').textContent = (g.battlepass && g.battlepass.level != null && g.battlepass.level !== -1) ? fmt(g.battlepass.level) : '—';
+
+    const earned = PACK_LEVELS.filter(l => l <= level).length;
+    const left = PACK_LEVELS.length - earned;
+    const next = PACK_LEVELS.find(l => l > level);
+    $('r1v').textContent = earned;
+    $('r1left').textContent = left;
+    $('r1earned').textContent = earned;
+    setRing($('ring1'), earned / 199);
+    $('sNext').textContent = next ? `Lv ${next}` : 'Done';
+    $('sNextSub').textContent = next ? `${next - level} level${next - level === 1 ? '' : 's'} away` : 'All 199 earned';
+
+    const pct = Math.min(100, (Math.min(level, 500) / 500) * 100);
+    $('tlFill').style.width = pct + '%';
+    $('tlPct').textContent = `Level ${level} / 500 · ${pct.toFixed(1)}%`;
+    $('seg1').classList.toggle('done', level >= 20);
+    $('seg2').classList.toggle('done', level >= 300);
+    $('seg3').classList.toggle('done', level >= 500);
+
+    $('legendTitle').textContent = legend.LegendName ? `${legend.LegendName} trackers` : 'Selected legend';
+    const box = $('legendStats');
+    box.innerHTML = '';
+    const trackers = (legend.data || []).filter(t => t && t.name);
+    if (!trackers.length) {
+      box.innerHTML = '<div class="muted">No trackers equipped on this legend\'s banner.</div>';
+    } else {
+      for (const t of trackers) {
+        const el = document.createElement('div');
+        el.className = 'stat';
+        el.innerHTML = '<div class="k"></div><div class="v"></div>';
+        el.children[0].textContent = t.name;
+        el.children[1].textContent = fmt(t.value);
+        box.appendChild(el);
+      }
+    }
+
+    $('setupPanel').classList.add('hidden');
+    $('dash').classList.remove('hidden');
+    $('refresh').classList.remove('hidden');
+    $('editBtn').classList.remove('hidden');
+  }
+
+  function showError(msg) {
+    $('error').textContent = msg;
+    $('error').classList.remove('hidden');
+    $('setupPanel').classList.remove('hidden');
+    $('dash').classList.add('hidden');
+  }
+
+  async function load() {
+    const player = store.get('player', ''), platform = store.get('platform', 'PC'), key = store.get('key', '');
+    if (!player || !key) return;
+    $('error').classList.add('hidden');
+    document.body.classList.add('loading');
+    try {
+      const url = 'https://api.mozambiquehe.re/bridge?player=' + encodeURIComponent(player) +
+        '&platform=' + encodeURIComponent(platform) + '&auth=' + encodeURIComponent(key);
+      const res = await fetch(url);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.Error) throw new Error(data.Error || `Request failed (${res.status})`);
+      render(data);
+    } catch (e) {
+      showError(e.message === 'Failed to fetch' ? 'Could not reach the API. Check your connection and try again.' : e.message);
+    } finally {
+      document.body.classList.remove('loading');
+    }
+  }
+
+  // ---------- setup ----------
+  $('player').value = store.get('player', '');
+  $('platform').value = store.get('platform', 'PC');
+  $('apikey').value = store.get('key', '');
+  $('setup').addEventListener('submit', e => {
+    e.preventDefault();
+    store.set('player', $('player').value.trim());
+    store.set('platform', $('platform').value);
+    store.set('key', $('apikey').value.trim());
+    load();
+  });
+  $('refresh').onclick = load;
+  $('editBtn').onclick = () => { $('setupPanel').classList.toggle('hidden'); };
+
+  renderOpened();
+  setRing($('ring1'), 0);
+
+  // ?demo shows sample data (for previewing the layout without a key)
+  if (new URLSearchParams(location.search).has('demo')) {
+    render({
+      global: { name: 'DemoPlayer', platform: 'PC', level: 237, toNextLevelPercent: 64, levelPrestige: 0,
+        rank: { rankName: 'Platinum', rankDiv: 2, rankScore: 9120 }, battlepass: { level: 58 } },
+      realtime: { isOnline: 1, currentStateAsText: 'In lobby' },
+      legends: { selected: { LegendName: 'Wraith', data: [
+        { name: 'BR Kills', value: 4821 }, { name: 'BR Wins', value: 312 }, { name: 'BR Damage', value: 1288450 } ] } },
+    });
+  } else {
+    load();
+  }
+})();
+</script>
 </body>
 </html>
