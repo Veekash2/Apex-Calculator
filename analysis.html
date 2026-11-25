@@ -119,6 +119,13 @@
   .persona p { margin: 0 0 10px; }
   .chips { display: flex; gap: 6px; flex-wrap: wrap; }
   .chip { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--line); }
+  .quip { margin: 16px 0 0; padding: 14px 18px; border-left: 3px solid var(--accent); background: var(--panel-2); border-radius: 0 10px 10px 0; }
+  .quip p { margin: 0; font-size: 17px; font-style: italic; }
+  .quip cite { display: block; margin-top: 6px; font-style: normal; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  .fun { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+  .fun > div { background: var(--panel-2); border-radius: 10px; padding: 10px 14px; }
+  .fun p { margin: 4px 0 0; }
+  @media (max-width: 560px) { .fun { grid-template-columns: 1fr; } .persona { flex-direction: column; } }
   .hidden { display: none !important; }
   footer { margin-top: 40px; color: var(--muted); font-size: 12px; text-align: center; }
 
@@ -533,6 +540,64 @@
     };
   }
 
+  // ---------- personality flavour ----------
+  // Original lines written in each legend's style (not in-game voice lines).
+  // 'aggro' = Predator / Momentum / Vulture, 'team' = everyone else.
+  const LEGEND_QUIPS = {
+    'Alter':      { aggro: 'Every door leads to the same place with you: a fight. I approve.', team: 'I open the paths. You make sure your squad walks through them alive.' },
+    'Ash':        { aggro: 'Efficiency noted. Your kill count is approaching... acceptable.', team: 'You weaken, they finish. A predictable pattern. Useful, though.' },
+    'Axle':       { aggro: 'Full throttle, no brakes. Now that is how you take a corner.', team: 'You build the lead, your squad crosses the line. Good pit crew.' },
+    'Ballistic':  { aggro: 'Back in my day we called that a warm-up. Not bad, rookie.', team: 'Soften them up first, lad. Old tricks still work.' },
+    'Bangalore':  { aggro: 'Objective: everyone. Status: in progress. Carry on, soldier.', team: 'Suppressing fire wins wars. Glory is for the paperwork.' },
+    'Bloodhound': { aggro: 'The Allfather smiles on a hunter who never stops.', team: 'You wound the prey so the pack may feast. A noble hunt.' },
+    'Catalyst':   { aggro: 'Chaos has a rhythm, and you are dancing to it.', team: 'You hold the line so others can strike. Steady as stone.' },
+    'Caustic':    { aggro: 'Fascinating. The subjects collapse faster when you are near.', team: 'You expose the weakness; the others merely observe the result.' },
+    'Conduit':    { aggro: 'Whoa, you\'re fully charged today! Leave some for the rest of us!', team: 'Shields up, squad up! You\'re the battery this team runs on.' },
+    'Crypto':     { aggro: 'Ran the numbers on you. They all say "do not engage".', team: 'You hack the fight open. Others take the credit. Classic.' },
+    'Fuse':       { aggro: 'Boom, boom and a bit more boom. Mate, you\'re a legend!', team: 'You light the fuse, your mates enjoy the fireworks. Beauty!' },
+    'Gibraltar':  { aggro: 'Easy there, brotha! Save a few for the rest of the Outlands!', team: 'Tanking hits so your crew gets the glory? That\'s family, brotha.' },
+    'Horizon':    { aggro: 'Your kill streak has its own gravitational pull, love.', team: 'You bend the fight so your squad lands safely. Brilliant.' },
+    'Lifeline':   { aggro: 'Patch \'em up, knock \'em down. You do both, and I respect it.', team: 'Nobody gets left behind on your watch. That\'s the job.' },
+    'Loba':       { aggro: 'Darling, you take kills the way I take jewellery: all of them.', team: 'You do the heavy work and others wear the prize. Tragic, really.' },
+    'Mad Maggie': { aggro: 'Ha! Now THAT is how you clear a room!', team: 'Kick the door in, let the others mop up. Proper teamwork.' },
+    'Mirage':     { aggro: 'Is that the real you or a decoy? Either way, they\'re all down.', team: 'You did all the work and someone else got the kill? Classic me move.' },
+    'Newcastle':  { aggro: 'The people need a hero. Apparently they also need a scoreboard.', team: 'You stand in front so others can stand at all. That\'s a guardian.' },
+    'Octane':     { aggro: 'Faster! Louder! More kills! Who needs a plan?!', team: 'You start the fight at full speed and your squad finishes it. Hype!' },
+    'Pathfinder': { aggro: 'Wow, friend! Your kill count makes my circuits very happy!', team: 'You are the best teammate! Statistically. I checked. Twice!' },
+    'Rampart':    { aggro: 'Sheila\'s jealous, love. You\'re outshooting her.', team: 'Set up the wall, soften \'em, let your mates clean up. Sorted.' },
+    'Revenant':   { aggro: 'Another skinsuit hits the floor. You\'re almost worth my time.', team: 'You do the killing, they take the trophies. Sentimental fools.' },
+    'Seer':       { aggro: 'I saw this fight before it started. You were always going to win it.', team: 'Your heartbeat is calm while others panic. That is a gift.' },
+    'Sparrow':    { aggro: 'Tracked \'em, trapped \'em, dropped \'em. Clean hunt.', team: 'You spot the trail and your squad follows it. Good scouting.' },
+    'Valkyrie':   { aggro: 'Up in the sky, down on the scoreboard. You fly like a legend.', team: 'You get your squad where it needs to be. That\'s a real pilot.' },
+    'Vantage':    { aggro: 'One shot, one story. You\'ve got a whole book now.', team: 'You tag them from afar so the squad can move in. Patient. Smart.' },
+    'Wattson':    { aggro: 'Your kill rate is very... electrifying! Is that the right word?', team: 'You build the defence and keep everyone safe. That is the best part!' },
+    'Wraith':     { aggro: 'The voices said you\'d win this one. They were right again.', team: 'You go in first so the others don\'t have to. The void remembers.' },
+  };
+  const FUN = {
+    'The Apex Predator':    { likely: 'end the match with a 4-digit damage badge and no shields left', unlikely: 'say "let\'s rotate early"' },
+    'The Vulture':          { likely: 'arrive 4 seconds after a fight starts and leave with every kill', unlikely: 'take a fair 1v1 when a third-party is available' },
+    'The Unsung Workhorse': { likely: 'deal 2,000 damage and get 2 kills', unlikely: 'see their name at the top of the kill feed' },
+    'The Guardian Angel':   { likely: 'run through gas for a banner', unlikely: 'leave a teammate in a death box' },
+    'The Ring Strategist':  { likely: 'say "we should rotate now" before anyone else notices the ring', unlikely: 'hot drop Fragment' },
+    'The Momentum Monster': { likely: 'push the next squad straight after winning a fight', unlikely: 'reset and heal before the next push' },
+    'The Shield Cracker':   { likely: 'ping "enemy cracked" and watch a teammate take the knock', unlikely: 'thirst a knock when there\'s another enemy to shoot' },
+    'The All-Rounder':      { likely: 'fit into any squad with any legend', unlikely: 'be the reason you lost' },
+  };
+  const AGGRO = new Set(['The Apex Predator', 'The Momentum Monster', 'The Vulture']);
+
+  function personalityExtras(personaName, legendName) {
+    const q = LEGEND_QUIPS[legendName];
+    const fun = FUN[personaName];
+    let html = '';
+    if (q) {
+      html += `<blockquote class="quip"><p>“${esc(AGGRO.has(personaName) ? q.aggro : q.team)}”</p><cite>${esc(legendName)}, on your playstyle</cite></blockquote>`;
+    }
+    if (fun) {
+      html += `<div class="fun"><div><span class="k">Most likely to</span><p>${esc(fun.likely)}</p></div><div><span class="k">Least likely to</span><p>${esc(fun.unlikely)}</p></div></div>`;
+    }
+    return html;
+  }
+
   // ---------- Apex personality ----------
   function renderPersonality(T, M, legends) {
     const dpk = M.dpk;
@@ -564,7 +629,8 @@
     if (main) traits.push(`${main.name} main`);
     $('personality').innerHTML = `<div class="persona"><div class="emoji" aria-hidden="true">${p.emoji}</div>
       <div><div class="k">Your Apex personality</div><h3 class="pname">${p.name}</h3><p>${p.txt}</p>
-      <div class="chips">${traits.map(t => `<span class="chip">${esc(t)}</span>`).join('')}</div></div></div>`;
+      <div class="chips">${traits.map(t => `<span class="chip">${esc(t)}</span>`).join('')}</div>
+      ${personalityExtras(p.name, main && main.name)}</div></div>`;
   }
 
   // ---------- red shards ----------
