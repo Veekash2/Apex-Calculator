@@ -351,7 +351,6 @@
   function render(d) {
     lastData = d;
     const { g, legends, T, M } = analyse(d);
-    { const c = careerDpk(); if (c) M.dpk = c.dpk; } // all-time Career numbers win when entered
     $('pName').textContent = g.name || '—';
     if (g.avatar) $('avatar').src = g.avatar; else $('avatar').classList.add('hidden');
     $('dataNote').innerHTML = `${legends.length} legend${legends.length === 1 ? '' : 's'} with trackers<br>Updated ${new Date(d.updated || Date.now()).toLocaleString()}`;
@@ -415,7 +414,7 @@
     $('roleBadge').textContent = '★ ' + role;
 
     // ---- damage per kill (clean-up) ----
-    renderCleanup(T, M);
+    renderCleanup(T, M, g.name, legends);
 
     // ---- Apex personality ----
     renderPersonality(T, M, legends);
@@ -503,51 +502,36 @@
     if (dpk <= 400) return { key: 'above', label: 'Above average', txt: '350–400 damage per kill: you put in more damage than most for each kill. Some of your targets are probably being finished by teammates.' };
     return { key: 'heavy', label: 'Heavy lifter', txt: 'Over 400 damage per kill: you do the heavy lifting, either poking from range without finishing knocks, or teammates taking kills after you did most of the work.' };
   }
-  function careerDpk() {
-    const dmg = +store.get('careerDamage', 0), k = +store.get('careerKills', 0);
-    return dmg > 0 && k > 0 ? { dmg, k, dpk: dmg / k } : null;
-  }
 
-  function renderCleanup(T, M) {
-    const career = careerDpk();
-    const src = career ? { dpk: career.dpk, dmg: career.dmg, k: career.k, label: 'all-time (Career page)' }
-      : (T.kills && T.damage) ? { dpk: T.damage / T.kills, dmg: T.damage, k: T.kills, label: 'tracked legends only' } : null;
+  function renderCleanup(T, M, playerName, legends) {
     let html = '';
-    if (src) {
-      const b = dpkBand(src.dpk);
-      const pos = Math.min(100, src.dpk / 500 * 100);
-      html += `<div class="v">${fmt(src.dpk)} <span style="font-size:18px" class="muted">dmg / kill</span></div>
-        <div class="s">${fmt(src.dmg)} damage ÷ ${fmt(src.k)} kills · ${src.label}</div>
+    if (T.kills && T.damage) {
+      const dpk = T.damage / T.kills;
+      const b = dpkBand(dpk);
+      const pos = Math.min(100, dpk / 500 * 100);
+      const scope = legends.length === 1 ? legends[0].name + ' only' : legends.length + ' tracked legends';
+      html += `<div class="v">${fmt(dpk)} <span style="font-size:18px" class="muted">dmg / kill</span></div>
+        <div class="s">${fmt(T.damage)} damage ÷ ${fmt(T.kills)} kills · ${esc(scope)}</div>
         <div class="dpk-scale" aria-label="Damage per kill scale">
           <div class="seg" style="flex:250">Under 250<br><b>Clean-up</b></div>
           <div class="seg" style="flex:100">250–350<br><b>Average</b></div>
           <div class="seg" style="flex:50">350–400</div>
           <div class="seg" style="flex:100">Over 400<br><b>Heavy lifting</b></div>
-          <div class="marker" style="left:${pos}%" title="You: ${fmt(src.dpk)}"></div>
+          <div class="marker" style="left:${pos}%" title="${fmt(dpk)} dmg/kill"></div>
         </div>
         <p><b>${b.label}.</b> ${b.txt}</p>`;
+      if (M.cleanupKills != null) {
+        const share = M.cleanupKills / T.kills;
+        html += `<p>Knockdown check: <b>${fmt(T.kills)}</b> kills from <b>${fmt(T.knocks)}</b> knockdowns means about <b>${fmt(M.cleanupKills)}</b> kills (${pct(share)}) were enemies a teammate knocked.</p>`;
+      }
+      html += `<p class="muted" style="font-size:13px"><b>Why this isn't exact:</b> shooting knocked players (thirsting) adds up to 100 damage without an extra kill, and poke damage enemies heal back also inflates the total. So a high number doesn't always mean kills are being stolen, and a low number is often just good team focus fire.</p>`;
     } else {
-      html += '<p class="muted">Enter your Career totals below, or equip Kills and Damage trackers, to see this.</p>';
+      const missing = [!T.kills && 'Kills', !T.damage && 'Damage'].filter(Boolean).join(' and ');
+      html += `<div class="v" style="font-size:24px">No data yet</div>
+        <p>The stats API has no <b>${missing}</b> numbers for <b>${esc(playerName || 'this player')}</b>, because ${legends.length ? 'none of their tracked legends have' : 'no legend has'} those trackers on the banner. Damage per kill can't be worked out until they're equipped.</p>
+        <div class="unlock">Equip the <b>Kills</b> and <b>Damage</b> trackers on the legend you play most, select that legend in the lobby, then reload this page. <a href="#trackers">How to equip trackers</a></div>`;
     }
-    if (M.cleanupKills != null) {
-      const share = T.kills ? M.cleanupKills / T.kills : 0;
-      html += `<p>Knockdown check: <b>${fmt(T.kills)}</b> kills from <b>${fmt(T.knocks)}</b> knockdowns means about <b>${fmt(M.cleanupKills)}</b> kills (${pct(share)}) were enemies a teammate knocked.</p>`;
-    }
-    html += `<details class="career"${career ? '' : ' open'}><summary>Use your all-time Career stats ${career ? '(entered)' : ''}</summary>
-        <p class="muted" style="font-size:13px">In Apex: Lobby → click your <b>name / level</b> above your legend to open your lifetime stats. Enter your total damage and kills:</p>
-        <div class="career-row">
-          <label>Total damage<input type="number" min="0" id="cDmg" value="${esc(store.get('careerDamage', ''))}"></label>
-          <label>Total kills<input type="number" min="0" id="cKills" value="${esc(store.get('careerKills', ''))}"></label>
-          <button class="btn primary" type="button" id="cSave">Update</button>
-        </div>
-      </details>
-      <p class="muted" style="font-size:13px"><b>Why this isn't exact:</b> shooting knocked players (thirsting) adds up to 100 damage without an extra kill, and poke damage enemies heal back also inflates your total. So a high number doesn't always mean your kills are being stolen, and a low number is often just good team focus fire.</p>`;
     $('cleanup').innerHTML = html;
-    $('cSave').onclick = () => {
-      store.set('careerDamage', String(Math.max(0, +$('cDmg').value || 0)));
-      store.set('careerKills', String(Math.max(0, +$('cKills').value || 0)));
-      if (lastData) render(lastData);
-    };
   }
 
   // ---------- personality flavour ----------
