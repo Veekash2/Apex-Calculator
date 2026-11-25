@@ -376,9 +376,9 @@
 
   // The API looks players up by platform account name. On PC that's the EA ID, not the Steam name.
   const ID_HELP = {
-    PC: { label: 'EA ID or account number', placeholder: 'EA ID name or 10-digit account number',
-      hint: 'PC players, including Steam: enter your <b>EA ID</b> (not your Steam name) or your <b>10-digit EA account number</b>. Find your EA ID at <a href="https://myaccount.ea.com" target="_blank" rel="noopener">myaccount.ea.com</a> → <b>About me</b>. If the name isn\'t found, try the number: it skips EA\'s name search, which sometimes fails.',
-      notFound: 'If you entered a name, try your 10-digit EA account number instead. EA\'s name search sometimes fails even for real accounts.' },
+    PC: { label: 'Steam ID or EA ID', placeholder: '17-digit Steam ID (e.g. 7656119…) or EA ID',
+      hint: '<b>Steam players:</b> enter your <b>17-digit Steam ID</b> (starts with 7656119). In Steam, click your name → <b>Account details</b>, it\'s shown under your account name. <b>EA app players:</b> enter your <b>EA ID</b> from <a href="https://myaccount.ea.com" target="_blank" rel="noopener">myaccount.ea.com</a> → <b>About me</b>.',
+      notFound: 'Steam players: use your 17-digit Steam ID (Steam → your name → Account details), not your Steam name. Name search often fails for Steam accounts.' },
     PS4: { label: 'PSN Online ID', placeholder: 'Your PSN Online ID',
       hint: 'PlayStation players: enter your <b>PSN Online ID</b>.', notFound: 'Check the spelling of your PSN Online ID.' },
     X1: { label: 'Xbox Gamertag', placeholder: 'Your Xbox Gamertag',
