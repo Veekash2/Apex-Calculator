@@ -11,3 +11,19 @@ Set your API key as an environment variable (never commit it):
 ```powershell
 $env:APEX_API_KEY = "your-key-here"
 ```
+
+## Usage
+
+```powershell
+.\apex-packs.ps1 -Player "YourName" -Platform PC   # PC, PS4 (PlayStation) or X1 (Xbox)
+.\apex-packs.ps1 -Level 137                        # no API needed
+```
+
+## Pack schedule
+
+| Levels   | Packs                 |
+|----------|-----------------------|
+| 2–20     | 1 every level (19)    |
+| 22–300   | 1 every 2 levels (140)|
+| 305–500  | 1 every 5 levels (40) |
+| **Total**| **199**               |
