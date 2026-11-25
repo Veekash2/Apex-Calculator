@@ -76,15 +76,22 @@ module.exports = async (req, res) => {
   const trace = [];
   const name = encodeURIComponent(player);
 
-  // 1. Search by name.
-  let data = await call(`/bridge?player=${name}&platform=${platform}`, key, trace);
-  let method = "name";
+  let data, method, uid = null;
+  if (/^\d{6,20}$/.test(player)) {
+    // 0. A numeric account ID (UID) was entered: look it up directly.
+    uid = player;
+    data = await call(`/bridge?uid=${name}&platform=${platform}`, key, trace);
+    method = "uid";
+  } else {
+    // 1. Search by name.
+    data = await call(`/bridge?player=${name}&platform=${platform}`, key, trace);
+    method = "name";
+  }
 
   // 2. Fall back to name -> UID -> stats.
-  let uid = null;
-  if (!isPlayer(data)) {
+  if (!isPlayer(data) && method === "name") {
     const lookup = await call(`/nametouid?player=${name}&platform=${platform}`, key, trace);
-    uid = lookup && !lookup.Error && (lookup.uid || (lookup.result && lookup.result.uid) || null);
+    uid = (lookup && !lookup.Error && (lookup.uid || (lookup.result && lookup.result.uid))) || null;
     if (uid) {
       data = await call(`/bridge?uid=${encodeURIComponent(uid)}&platform=${platform}`, key, trace);
       method = "uid";

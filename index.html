@@ -361,7 +361,7 @@
     try {
       const res = await fetch(`${API}?player=${encodeURIComponent(player)}&platform=${encodeURIComponent(platform)}`);
       const d = await res.json().catch(() => ({}));
-      if (res.status === 404) throw new Error(`No player found with the ${ID_HELP[platform].label} "${player}". ${ID_HELP[platform].notFound}`);
+      if (res.status === 404) throw new Error(`No player found for "${player}". ${ID_HELP[platform].notFound}`);
       if (!res.ok || !d.global) throw new Error(d.error || `Lookup failed (${res.status}).`);
       render(d);
     } catch (e) {
@@ -376,9 +376,9 @@
 
   // The API looks players up by platform account name. On PC that's the EA ID, not the Steam name.
   const ID_HELP = {
-    PC: { label: 'EA ID', placeholder: 'Your EA ID (not your Steam name)',
-      hint: 'PC players, including Steam: enter your <b>EA ID</b>, not your Steam name. Find it at <a href="https://myaccount.ea.com" target="_blank" rel="noopener">myaccount.ea.com</a> → <b>About me</b> (choose "Sign in with Steam" if you play on Steam).',
-      notFound: 'Make sure it\'s your EA ID, not your Steam name. Find it at myaccount.ea.com → About me.' },
+    PC: { label: 'EA ID or account number', placeholder: 'EA ID name or 10-digit account number',
+      hint: 'PC players, including Steam: enter your <b>EA ID</b> (not your Steam name) or your <b>10-digit EA account number</b>. Find your EA ID at <a href="https://myaccount.ea.com" target="_blank" rel="noopener">myaccount.ea.com</a> → <b>About me</b>. If the name isn\'t found, try the number: it skips EA\'s name search, which sometimes fails.',
+      notFound: 'If you entered a name, try your 10-digit EA account number instead. EA\'s name search sometimes fails even for real accounts.' },
     PS4: { label: 'PSN Online ID', placeholder: 'Your PSN Online ID',
       hint: 'PlayStation players: enter your <b>PSN Online ID</b>.', notFound: 'Check the spelling of your PSN Online ID.' },
     X1: { label: 'Xbox Gamertag', placeholder: 'Your Xbox Gamertag',
