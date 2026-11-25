@@ -357,6 +357,7 @@
   // On Vercel the function is same-origin. On GitHub Pages, call the Vercel deployment.
   const VERCEL_URL = 'https://apex-calculator-veekash.vercel.app';
   const API = location.hostname.endsWith('github.io') ? VERCEL_URL + '/api/stats' : '/api/stats';
+// The stats API allows 1 lookup/second: if it says busy (429), wait and try again.  async function fetchRetry(url, tries = 3) {    for (let i = 1; ; i++) {      const res = await fetch(url);      if (res.status !== 429 || i >= tries) return res;      const el = document.getElementById('waitMsg'); if (el) el.textContent = 'API busy, retrying…';      await new Promise(r => setTimeout(r, 1500 * i));    }  }
   const show = (id, on) => $(id).classList.toggle('hidden', !on);
   function showError(msg) { $('error').textContent = msg; show('error', true); }
 
@@ -383,7 +384,7 @@
     show('waiting', true);
     $('waitMsg').textContent = `Loading stats for ${player}…`;
     try {
-      const res = await fetch(`${API}?player=${encodeURIComponent(query)}&platform=${encodeURIComponent(apiPlatform)}`);
+      const res = await fetchRetry(`${API}?player=${encodeURIComponent(query)}&platform=${encodeURIComponent(apiPlatform)}`);
       const d = await res.json().catch(() => ({}));
       if (res.status === 404) throw new Error(`No player found for "${player}". ${ID_HELP[platform].notFound}`);
       if (!res.ok || !d.global) throw new Error(d.error || `Lookup failed (${res.status}).`);

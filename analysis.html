@@ -261,6 +261,7 @@
 
   const VERCEL_URL = 'https://apex-calculator-veekash.vercel.app';
   const API = location.hostname.endsWith('github.io') ? VERCEL_URL + '/api/stats' : '/api/stats';
+// The stats API allows 1 lookup/second: if it says busy (429), wait and try again.  async function fetchRetry(url, tries = 3) {    for (let i = 1; ; i++) {      const res = await fetch(url);      if (res.status !== 429 || i >= tries) return res;      const el = document.getElementById('waitMsg'); if (el) el.textContent = 'API busy, retrying…';      await new Promise(r => setTimeout(r, 1500 * i));    }  }
 
   // ---- level-pack schedule (same as dashboard) ----
   const isPackLevel = l => (l >= 2 && l <= 20) || (l >= 22 && l <= 300 && l % 2 === 0) || (l >= 305 && l <= 500 && l % 5 === 0);
@@ -673,7 +674,7 @@
       query = m[0]; apiPlatform = 'PC';
     }
     try {
-      const res = await fetch(`${API}?player=${encodeURIComponent(query)}&platform=${encodeURIComponent(apiPlatform)}`);
+      const res = await fetchRetry(`${API}?player=${encodeURIComponent(query)}&platform=${encodeURIComponent(apiPlatform)}`);
       const d = await res.json().catch(() => ({}));
       if (!res.ok || !d.global) throw new Error(d.error || `Lookup failed (${res.status})`);
       render(d);
