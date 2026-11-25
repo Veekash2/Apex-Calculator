@@ -49,6 +49,20 @@ async function call(path, key, trace) {
   return json;
 }
 
+// Keep per-legend trackers and icons; drop the large unused fields.
+function trimLegends(all) {
+  if (!all || typeof all !== "object") return null;
+  const out = {};
+  for (const [name, l] of Object.entries(all)) {
+    if (!l || typeof l !== "object") continue;
+    out[name] = {
+      data: Array.isArray(l.data) ? l.data.map(t => ({ name: t.name, value: t.value, key: t.key, global: t.global ? true : undefined })) : [],
+      icon: l.ImgAssets && l.ImgAssets.icon,
+    };
+  }
+  return out;
+}
+
 const isPlayer = d => d && !d.Error && d.global && typeof d.global === "object";
 
 module.exports = async (req, res) => {
@@ -116,7 +130,8 @@ module.exports = async (req, res) => {
     method,
     global: data.global,
     realtime: data.realtime,
-    legends: { selected: data.legends && data.legends.selected },
+    legends: { selected: data.legends && data.legends.selected, all: trimLegends(data.legends && data.legends.all) },
+    total: data.total || null,
     ...diagnostics,
   });
 };
