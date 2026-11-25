@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Apex Calculator</title>
+  <style>
+    :root { --bg: #f6f6f4; --fg: #1d1d1b; --muted: #5c5c58; --accent: #c8102e; }
+    @media (prefers-color-scheme: dark) { :root { --bg: #151514; --fg: #ececea; --muted: #a3a39e; --accent: #ff4d5e; } }
+    body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.6 system-ui, sans-serif; }
+    main { max-width: 640px; margin: 0 auto; padding: 64px 16px; }
+    h1 { margin: 0 0 8px; font-size: 2rem; }
+    h1 span { color: var(--accent); }
+    p { color: var(--muted); }
+  </style>
+</head>
+<body>
+  <main>
+    <h1><span>Apex</span> Calculator</h1>
+    <p>Personal tool to check my Apex Legends account level and calculate how many Apex Packs I have left until level 500.</p>
+    <p>Uses the Apex Legends Status API to look up player stats. Non-commercial, single user, only a few requests a day.</p>
+  </main>
+</body>
+</html>
