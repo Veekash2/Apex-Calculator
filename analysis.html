@@ -358,7 +358,7 @@
     // scope: which legends these numbers actually cover
     const names = legends.map(l => l.name);
     const listed = names.length ? names.join(', ') : 'none yet';
-    $('scopeNote').innerHTML = `<b>These are not your all-time totals.</b> Kills, damage and other stats below are lifetime numbers for <b>${esc(listed)}</b> only, the legend${names.length === 1 ? '' : 's'} with trackers on ${names.length === 1 ? 'its' : 'their'} banner when the API last saw you. The API can't read your full career stats. To include other legends, equip their Kills and Damage trackers in game and open a lobby.`;
+    $('scopeNote').innerHTML = !names.length ? `<b>No tracked stats yet.</b> The API can see ${esc(g.name || 'this player')}'s level and rank, but no legend has trackers on its banner, so there are no kills or damage to analyse. <a href="#trackers">How to equip trackers</a>` : `<b>These are not your all-time totals.</b> Kills, damage and other stats below are lifetime numbers for <b>${esc(listed)}</b> only, the legend${names.length === 1 ? '' : 's'} with trackers on ${names.length === 1 ? 'its' : 'their'} banner when the API last saw you. The API can't read your full career stats. To include other legends, equip their Kills and Damage trackers in game and open a lobby.`;
     const scopeLabel = names.length === 1 ? `${names[0]} only` : `${names.length} tracked legends`;
 
     // tiles
@@ -382,9 +382,9 @@
       { key: 'dpg', name: 'Damage output', val: M.dpg, show: v => `${fmt(v)} dmg/game`, score: v => clamp(v / 1200 * 100), typ: TYPICAL.dpg,
         why: 'Damage per game.', need: 'games' },
       { key: 'dpk', name: 'Finishing efficiency', val: M.dpk, show: v => `${fmt(v)} dmg/kill`, score: v => clamp(100 - (v - 150) / 3), typ: TYPICAL.dpk,
-        why: 'Lower damage per kill means you convert damage into kills (or pick up knocks).' },
+        why: 'Lower damage per kill means you convert damage into kills (or pick up knocks).', needText: 'Kills + Damage' },
       { key: 'klShare', name: 'Snowballing', val: M.klShare, show: v => `${pct(v, 1)} of kills as kill leader`, score: v => clamp(v / 0.2 * 100), typ: TYPICAL.klShare,
-        why: 'How often your kills come while you are the kill leader.' },
+        why: 'How often your kills come while you are the kill leader.', needText: 'Kills + Kills as Kill Leader' },
       { key: 'rpg', name: 'Support', val: M.rpg, show: v => `${fmt(v, 2)} revives/game`, score: v => clamp(v / 1.5 * 100), typ: TYPICAL.rpg,
         why: 'Revives per game.', need: 'revives' },
       { key: 'top3', name: 'Survival', val: M.top3, show: v => `${pct(v)} top-3 rate`, score: v => clamp(v / 0.45 * 100), typ: TYPICAL.top3,
@@ -393,7 +393,7 @@
     const scored = [];
     $('meters').innerHTML = '<h3>Role profile</h3>' + meters.map(m => {
       if (m.val == null) {
-        const needs = m.need === 'games' ? 'Games Played' : TRACKER_NAME[m.need] + (m.key === 'kpg' || m.key === 'dpg' ? '' : ' + Games Played');
+        const needs = m.needText ? m.needText : m.need === 'games' ? 'Games Played' : TRACKER_NAME[m.need] + (m.key === 'kpg' || m.key === 'dpg' ? '' : ' + Games Played');
         return `<div class="meter locked"><div class="row"><span class="name">${m.name}</span><span class="val">Equip ${esc(needs)}</span></div><div class="bar"></div></div>`;
       }
       const sc = m.score(m.val), typ = m.score(m.typ);
@@ -452,7 +452,9 @@
     $('legendTable').innerHTML = `<thead><tr><th>Legend</th><th>Kills</th><th>Damage</th><th>Dmg / kill</th><th>Kill-leader kills</th><th>Games</th><th>Kills / game</th></tr></thead><tbody>` +
       rows.map(r => `<tr><td class="legend">${r.icon ? `<img src="${esc(r.icon)}" alt="">` : ''}${esc(r.name)}${r === best ? '<span class="best">★ BEST</span>' : ''}</td>
         <td>${fmt(r.s.kills)}</td><td>${fmt(r.s.damage)}</td><td>${fmt(r.dpk)}</td><td>${fmt(r.s.klKills)}</td><td>${fmt(r.s.games)}</td><td>${fmt(r.kpg, 2)}</td></tr>`).join('') + '</tbody>';
-    $('legendUnlock').innerHTML = rows.length <= 1
+    $('legendUnlock').innerHTML = rows.length === 0
+      ? '<div class="unlock">No legend has trackers yet. Equip <b>Kills</b>, <b>Damage</b> and <b>Games Played</b> on the legend you play most (<a href="#trackers">how</a>).</div>'
+      : rows.length === 1
       ? '<div class="unlock">Only one legend has trackers. Equip <b>Kills</b> and <b>Games Played</b> on the other legends you play to compare them and find your real best.</div>' : '';
 
     // ---- rank estimate ----
@@ -614,7 +616,9 @@
       { when: () => true, name: 'The All-Rounder', emoji: '⚖️',
         txt: 'A bit of everything: you take your fights, trade fairly and finish what you start. Solid in any squad, with room to specialise.' },
     ];
-    const p = P.find(x => { try { return x.when(); } catch { return false; } });
+    const hasData = T.kills || T.damage || T.games;
+    const p = hasData ? P.find(x => { try { return x.when(); } catch { return false; } })
+      : { name: 'Mystery Legend', emoji: '❓', txt: 'No tracked stats yet, so your playstyle is still a mystery. Equip Kills, Damage and Games Played on your main legend to reveal your Apex personality.' };
     const traits = [];
     if (dpk != null) traits.push(`${dpkBand(dpk).label} (${fmt(dpk)} dmg/kill)`);
     if (M.klShare != null) traits.push(`${pct(M.klShare, 1)} kills as kill leader`);
@@ -624,7 +628,7 @@
     $('personality').innerHTML = `<div class="persona"><div class="emoji" aria-hidden="true">${p.emoji}</div>
       <div><div class="k">Your Apex personality</div><h3 class="pname">${p.name}</h3><p>${p.txt}</p>
       <div class="chips">${traits.map(t => `<span class="chip">${esc(t)}</span>`).join('')}</div>
-      ${personalityExtras(p.name, main && main.name)}</div></div>`;
+      ${hasData ? personalityExtras(p.name, main && main.name) : ''}</div></div>`;
   }
 
   // ---------- red shards ----------
