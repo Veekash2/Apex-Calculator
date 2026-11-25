@@ -10,7 +10,7 @@ Uses the [Apex Legends Status API](https://apexlegendsapi.com) to look up player
 
 - Anyone can type a profile name on the site and click **Look up** to get live stats.
 - The page calls `api/stats.js`, a Vercel serverless function that reads the key from the `APEX_API_KEY` **environment variable** and calls the API. The key never reaches the browser. Identical lookups are cached for 2 minutes to stay within API limits.
-- The site works on Vercel directly, and the GitHub Pages copy calls the Vercel function (set `VERCEL_URL` in `index.html` to your Vercel address).
+- The site works on Vercel directly, and the GitHub Pages copy calls the Vercel function (https://apex-calculator-veekash.vercel.app).
 
 ## Deploy (Vercel)
 
