@@ -120,7 +120,7 @@
   <main id="report" class="hidden">
     <!-- Overview -->
     <section class="panel hero">
-      <img id="avatar" alt="">
+      <img id="avatar" alt="" onerror="this.classList.add('hidden')">
       <div style="flex:1;min-width:220px">
         <div class="k">Player analysis</div>
         <h1 id="pName">—</h1>
@@ -383,7 +383,7 @@
     for (const m of scored) {
       const diff = m.sc - m.typSc;
       const line = `<b>${m.name}</b>: ${esc(m.show(m.val))} vs typical ${esc(m.show(m.typ))}.`;
-      if (diff >= 8) S.push(line); else if (diff <= -8) W.push(line);
+      if (diff >= 8) S.push(line); else if (diff <= -8 && m.key !== 'dpk') W.push(line); // dpk weakness has its own advice line below
     }
     if (M.klShare != null && M.klShare >= 0.07) S.push(`<b>Closing out as kill leader</b>: ${fmt(T.klKills)} kills while holding kill leader shows you keep fighting when you're ahead.`);
     if (M.hsRate != null) (M.hsRate >= TYPICAL.hsRate ? S : W).push(`<b>Aim</b>: ${pct(M.hsRate)} of kills have a matching headshot count (typical ~${pct(TYPICAL.hsRate)}).`);
@@ -391,7 +391,7 @@
       const better = 100 - als;
       (better >= 50 ? S : W).push(`<b>Ranked standing</b>: top ${als.toFixed(1)}% of ranked players this split, ahead of about ${better.toFixed(0)}% of them.`);
     }
-    if (M.dpk != null && M.dpk > TYPICAL.dpk * 1.15) W.push('<b>Converting damage to kills</b>: you deal plenty of damage but teammates often finish your targets. Push knocked enemies faster, or swap to higher time-to-kill weapons up close.');
+    if (M.dpk != null && M.dpk > TYPICAL.dpk * 1.15) W.push(`<b>Converting damage to kills</b>: ${fmt(M.dpk)} damage per kill vs typical ${TYPICAL.dpk}. You deal plenty of damage but teammates often finish your targets. Push knocked enemies faster, or use faster-killing weapons up close.`);
     if (legends.length === 1) W.push(`<b>Legend pool</b>: all tracked stats are on ${esc(legends[0].name)}. Being solid on a second legend helps when yours is taken.`);
     const li = (arr, cls, sym, empty) => arr.length ? arr.map(t => `<li><span class="ico ${cls}">${sym}</span><span>${t}</span></li>`).join('') : `<li><span class="ico info">i</span><span class="muted">${empty}</span></li>`;
     $('strengths').innerHTML = li(S, 'good', '+', 'Nothing stands out above typical yet. More trackers will reveal strengths.');
