@@ -46,6 +46,8 @@
     border-radius: 10px; padding: 10px 12px; outline: none; }
   input:focus, select:focus { border-color: var(--accent); }
   .hint { color: var(--muted); font-size: 13px; margin: 12px 0 0; }
+  .hint a { color: var(--fg); }
+  .hint b { color: var(--fg); font-weight: 600; }
   .error { color: #ff7b81; background: var(--accent-soft); border: 1px solid rgba(229,50,58,.35); padding: 10px 14px; border-radius: 10px; margin-top: 14px; }
 
   /* hero */
@@ -142,8 +144,8 @@
   <section class="panel">
     <form class="setup" id="setup">
       <div class="name-field">
-        <label for="player">Profile name</label>
-        <input id="player" required autocomplete="off" maxlength="64" placeholder="Your Apex / EA name">
+        <label for="player" id="playerLabel">EA ID</label>
+        <input id="player" required autocomplete="off" maxlength="64" placeholder="Your EA ID (not your Steam name)">
       </div>
       <div>
         <label for="platform">Platform</label>
@@ -156,6 +158,7 @@
       </div>
       <button class="primary" type="submit">Look up</button>
     </form>
+    <p class="hint" id="idHint"></p>
 
     <div id="waiting" class="notice hidden"><span class="spinner"></span> <span id="waitMsg">Loading stats…</span></div>
     <div id="error" class="error hidden"></div>
@@ -358,6 +361,7 @@
     try {
       const res = await fetch(`${API}?player=${encodeURIComponent(player)}&platform=${encodeURIComponent(platform)}`);
       const d = await res.json().catch(() => ({}));
+      if (res.status === 404) throw new Error(`No player found with the ${ID_HELP[platform].label} "${player}". ${ID_HELP[platform].notFound}`);
       if (!res.ok || !d.global) throw new Error(d.error || `Lookup failed (${res.status}).`);
       render(d);
     } catch (e) {
@@ -370,8 +374,29 @@
     }
   }
 
+  // The API looks players up by platform account name. On PC that's the EA ID, not the Steam name.
+  const ID_HELP = {
+    PC: { label: 'EA ID', placeholder: 'Your EA ID (not your Steam name)',
+      hint: 'PC players, including Steam: enter your <b>EA ID</b>, not your Steam name. Find it at <a href="https://myaccount.ea.com" target="_blank" rel="noopener">myaccount.ea.com</a> → <b>About me</b> (choose "Sign in with Steam" if you play on Steam).',
+      notFound: 'Make sure it\'s your EA ID, not your Steam name. Find it at myaccount.ea.com → About me.' },
+    PS4: { label: 'PSN Online ID', placeholder: 'Your PSN Online ID',
+      hint: 'PlayStation players: enter your <b>PSN Online ID</b>.', notFound: 'Check the spelling of your PSN Online ID.' },
+    X1: { label: 'Xbox Gamertag', placeholder: 'Your Xbox Gamertag',
+      hint: 'Xbox players: enter your <b>Xbox Gamertag</b>.', notFound: 'Check the spelling of your Xbox Gamertag.' },
+    SWITCH: { label: 'Nintendo account name', placeholder: 'Your Nintendo account name',
+      hint: 'Switch players: enter your <b>Nintendo account name</b>.', notFound: 'Check the spelling of your Nintendo account name.' },
+  };
+  function updateIdHelp() {
+    const h = ID_HELP[$('platform').value] || ID_HELP.PC;
+    $('playerLabel').textContent = h.label;
+    $('player').placeholder = h.placeholder;
+    $('idHint').innerHTML = h.hint;
+  }
+  $('platform').addEventListener('change', updateIdHelp);
+
   $('player').value = store.get('player', '');
   $('platform').value = store.get('platform', 'PC');
+  updateIdHelp();
   $('setup').addEventListener('submit', e => {
     e.preventDefault();
     const player = $('player').value.trim(), platform = $('platform').value;

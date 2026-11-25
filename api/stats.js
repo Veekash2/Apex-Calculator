@@ -27,7 +27,7 @@ module.exports = async (req, res) => {
 
   const player = String(req.query.player || "").trim();
   const platform = String(req.query.platform || "PC").toUpperCase();
-  if (!player || player.length > 64) return res.status(400).json({ error: "Enter a profile name." });
+  if (!player || player.length > 64) return res.status(400).json({ error: "Enter your EA ID (PC) or console name." });
   if (!PLATFORMS.has(platform)) return res.status(400).json({ error: "Unknown platform." });
 
   const key = process.env.APEX_API_KEY;
