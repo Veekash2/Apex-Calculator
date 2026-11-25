@@ -150,7 +150,8 @@
       <div>
         <label for="platform">Platform</label>
         <select id="platform">
-          <option value="PC">PC</option>
+          <option value="STEAM">PC – Steam</option>
+          <option value="PC">PC – EA app</option>
           <option value="PS4">PlayStation</option>
           <option value="X1">Xbox</option>
           <option value="SWITCH">Switch</option>
@@ -355,11 +356,30 @@
   const show = (id, on) => $(id).classList.toggle('hidden', !on);
   function showError(msg) { $('error').textContent = msg; show('error', true); }
 
+  // Steam: accept a 17-digit Steam ID or a steamcommunity.com/profiles/<id> link.
+  function steamIdFrom(input) {
+    const m = String(input).match(/7656119\d{10}/);
+    return m ? m[0] : null;
+  }
+
   async function lookup(player, platform) {
-    show('error', false); show('waiting', true);
+    show('error', false);
+    let query = player, apiPlatform = platform;
+    if (platform === 'STEAM') {
+      query = steamIdFrom(player);
+      apiPlatform = 'PC';
+      if (!query) {
+        $('dash').classList.add('hidden');
+        showError(/steamcommunity\.com\/id\//i.test(player)
+          ? 'That\'s a custom profile link. Use the 17-digit Steam ID instead: Steam → your name → Account details.'
+          : 'Enter your 17-digit Steam ID (it starts with 7656119) or your steamcommunity.com/profiles/… link.');
+        return;
+      }
+    }
+    show('waiting', true);
     $('waitMsg').textContent = `Loading stats for ${player}…`;
     try {
-      const res = await fetch(`${API}?player=${encodeURIComponent(player)}&platform=${encodeURIComponent(platform)}`);
+      const res = await fetch(`${API}?player=${encodeURIComponent(query)}&platform=${encodeURIComponent(apiPlatform)}`);
       const d = await res.json().catch(() => ({}));
       if (res.status === 404) throw new Error(`No player found for "${player}". ${ID_HELP[platform].notFound}`);
       if (!res.ok || !d.global) throw new Error(d.error || `Lookup failed (${res.status}).`);
@@ -376,9 +396,12 @@
 
   // The API looks players up by platform account name. On PC that's the EA ID, not the Steam name.
   const ID_HELP = {
-    PC: { label: 'Steam ID or EA ID', placeholder: '17-digit Steam ID (e.g. 7656119…) or EA ID',
-      hint: '<b>Steam players:</b> enter your <b>17-digit Steam ID</b> (starts with 7656119). In Steam, click your name → <b>Account details</b>, it\'s shown under your account name. <b>EA app players:</b> enter your <b>EA ID</b> from <a href="https://myaccount.ea.com" target="_blank" rel="noopener">myaccount.ea.com</a> → <b>About me</b>.',
-      notFound: 'Steam players: use your 17-digit Steam ID (Steam → your name → Account details), not your Steam name. Name search often fails for Steam accounts.' },
+    STEAM: { label: 'Steam ID', placeholder: '7656119… or steamcommunity.com/profiles/…',
+      hint: 'Enter your <b>17-digit Steam ID</b> (starts with 7656119), or paste your Steam profile link. Find it in Steam: click your name (top right) → <b>Account details</b>; it\'s under your account name.',
+      notFound: 'Check the Steam ID is yours and that you\'ve played Apex on that Steam account.' },
+    PC: { label: 'EA ID', placeholder: 'Your EA ID',
+      hint: 'EA app players: enter your <b>EA ID</b> from <a href="https://myaccount.ea.com" target="_blank" rel="noopener">myaccount.ea.com</a> → <b>About me</b>. Playing through Steam? Choose <b>PC – Steam</b> above instead.',
+      notFound: 'EA\'s name search sometimes fails. If you play through Steam, choose PC – Steam and use your Steam ID.' },
     PS4: { label: 'PSN Online ID', placeholder: 'Your PSN Online ID',
       hint: 'PlayStation players: enter your <b>PSN Online ID</b>.', notFound: 'Check the spelling of your PSN Online ID.' },
     X1: { label: 'Xbox Gamertag', placeholder: 'Your Xbox Gamertag',
@@ -395,7 +418,7 @@
   $('platform').addEventListener('change', updateIdHelp);
 
   $('player').value = store.get('player', '');
-  $('platform').value = store.get('platform', 'PC');
+  $('platform').value = store.get('platform', 'STEAM');
   updateIdHelp();
   $('setup').addEventListener('submit', e => {
     e.preventDefault();
@@ -406,11 +429,11 @@
   });
   $('refresh').onclick = () => {
     const player = store.get('player', '');
-    if (player) lookup(player, store.get('platform', 'PC'));
+    if (player) lookup(player, store.get('platform', 'STEAM'));
   };
   function load() {
     const player = store.get('player', '');
-    if (player) lookup(player, store.get('platform', 'PC'));
+    if (player) lookup(player, store.get('platform', 'STEAM'));
   }
 
   renderOpened();
