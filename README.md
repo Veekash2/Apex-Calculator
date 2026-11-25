@@ -2,7 +2,7 @@
 
 Personal tool to check my Apex Legends account level and calculate how many Apex Packs I have left until level 500.
 
-**Live site:** https://veekash2.github.io/Apex-Calculator/ (add `?demo` to preview with sample data)
+**Live site:** https://veekash2.github.io/Apex-Calculator/ — type a profile name and click Look up (add `?demo` to preview with sample data)
 
 Uses the [Apex Legends Status API](https://apexlegendsapi.com) to look up player stats. Non-commercial, single user, about one request an hour.
 

@@ -40,7 +40,7 @@
   .panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; }
 
   /* setup form */
-  form.setup { display: grid; grid-template-columns: 1.3fr .7fr 1.3fr auto; gap: 12px; align-items: end; }
+  form.setup { display: grid; grid-template-columns: 1fr 180px auto; gap: 12px; align-items: end; }
   label { display: block; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 6px; }
   input, select { width: 100%; font: 500 15px Inter, sans-serif; color: var(--fg); background: var(--bg); border: 1px solid var(--line);
     border-radius: 10px; padding: 10px 12px; outline: none; }
@@ -105,11 +105,19 @@
   .muted { color: var(--muted); }
   footer { margin-top: 32px; color: var(--muted); font-size: 12px; text-align: center; }
   footer a { color: var(--muted); }
+  .notice { margin-top: 16px; padding: 14px 16px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--line); }
+  .notice p { margin: 0 0 12px; }
+  .notice .hint { margin: 12px 0 0; }
+  a.btn { display: inline-block; text-decoration: none; }
+  a.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--line); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin .8s linear infinite; vertical-align: -2px; margin-right: 6px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
   .hidden { display: none !important; }
   .loading { opacity: .6; pointer-events: none; }
 
   @media (max-width: 820px) {
-    form.setup { grid-template-columns: 1fr 1fr; }
+    form.setup { grid-template-columns: 1fr 1fr; } .name-field { grid-column: 1 / -1; }
     .g4 { grid-template-columns: 1fr 1fr; }
     .g2 { grid-template-columns: 1fr; }
     .hero h2 { font-size: 34px; }
@@ -125,12 +133,37 @@
 <div class="wrap">
   <header class="top">
     <div class="brand"><div class="mark"></div>Apex <span>Calculator</span></div>
-    <div class="muted" id="updated" style="font-size:13px"></div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <span class="muted" id="updated" style="font-size:13px"></span>
+      <button id="refresh" class="hidden" type="button" title="Fetch fresh stats now">↻ Refresh</button>
+    </div>
   </header>
 
-  <section id="setupPanel" class="panel hidden">
-    <h3 style="font-size:22px">No stats yet</h3>
-    <p class="hint" id="setupMsg">Stats are fetched hourly by a GitHub Action using the <code>APEX_API_KEY</code> secret. Set the <code>APEX_PLAYER</code> (and optionally <code>APEX_PLATFORM</code>) repository variables, then run the <b>Update stats</b> workflow from the Actions tab.</p>
+  <section class="panel">
+    <form class="setup" id="setup">
+      <div class="name-field">
+        <label for="player">Profile name</label>
+        <input id="player" required autocomplete="off" maxlength="64" placeholder="Your Apex / EA name">
+      </div>
+      <div>
+        <label for="platform">Platform</label>
+        <select id="platform">
+          <option value="PC">PC</option>
+          <option value="PS4">PlayStation</option>
+          <option value="X1">Xbox</option>
+          <option value="SWITCH">Switch</option>
+        </select>
+      </div>
+      <button class="primary" type="submit">Look up</button>
+    </form>
+
+    <div id="request" class="notice hidden">
+      <p id="requestMsg"></p>
+      <a id="requestLink" class="btn primary" target="_blank" rel="noopener">Request lookup on GitHub ↗</a>
+      <p class="hint">GitHub opens with the request filled in. Click <b>Create</b> (or <b>Submit new issue</b>) and come back here. Your stats appear automatically, usually within 1–2 minutes.</p>
+    </div>
+    <div id="waiting" class="notice hidden"><span class="spinner"></span> <span id="waitMsg">Waiting for GitHub to fetch your stats…</span></div>
+    <div id="error" class="error hidden"></div>
   </section>
 
   <main id="dash" class="hidden">
@@ -313,18 +346,103 @@
       $('updated').textContent = `Updated ${ago}`;
       $('updated').title = t.toLocaleString();
     }
-    $('setupPanel').classList.add('hidden');
     $('dash').classList.remove('hidden');
+    $('refresh').classList.remove('hidden');
   }
 
-  async function load() {
+  // ---------- lookup via GitHub issue -> Action (uses the APEX_API_KEY secret) ----------
+  const REPO = 'Veekash2/Apex-Calculator';
+  // Must match the slug rule in .github/workflows/update-stats.yml
+  const slugOf = name => name.replace(/[A-Z]/g, c => c.toLowerCase()).replace(/[^a-z0-9_-]/gu, '_');
+  const show = (id, on) => $(id).classList.toggle('hidden', !on);
+  let pollTimer = null;
+
+  async function fetchStats(player, platform) {
+    const res = await fetch(`stats/${platform}/${slugOf(player)}.json?t=${Date.now()}`, { cache: 'no-store' });
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error(`Could not load stats (${res.status}).`);
+    return res.json();
+  }
+
+  function issueUrl(player, platform) {
+    const title = `lookup:${platform}:${player}`;
+    const body = 'Stats lookup requested from the Apex Calculator site. Just submit this issue; it closes itself when done.';
+    return `https://github.com/${REPO}/issues/new?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}`;
+  }
+
+  function askForLookup(player, platform, msg) {
+    $('requestMsg').innerHTML = '';
+    $('requestMsg').append(msg);
+    $('requestLink').href = issueUrl(player, platform);
+    show('request', true);
+    $('requestLink').onclick = () => startPolling(player, platform);
+  }
+
+  function startPolling(player, platform) {
+    const since = Date.now() - 5000;
+    const deadline = Date.now() + 5 * 60 * 1000;
+    show('request', false); show('error', false); show('waiting', true);
+    $('waitMsg').textContent = `Waiting for GitHub to fetch stats for ${player}…`;
+    clearInterval(pollTimer);
+    pollTimer = setInterval(async () => {
+      try {
+        const d = await fetchStats(player, platform);
+        if (d && d.lastErrorAt && Date.parse(d.lastErrorAt) > since) {
+          clearInterval(pollTimer); show('waiting', false);
+          showError(`Lookup failed: ${d.lastError}. Check the profile name and platform.`);
+          if (d.global) render(d);
+          return;
+        }
+        if (d && d.global && Date.parse(d.updated) > since) {
+          clearInterval(pollTimer); show('waiting', false); render(d);
+          return;
+        }
+      } catch { /* keep waiting */ }
+      if (Date.now() > deadline) {
+        clearInterval(pollTimer); show('waiting', false);
+        showError('Still no stats after 5 minutes. Make sure you submitted the issue on GitHub, then check the Actions tab.');
+      }
+    }, 10000);
+  }
+
+  function showError(msg) { $('error').textContent = msg; show('error', true); }
+
+  async function lookup(player, platform) {
+    clearInterval(pollTimer);
+    show('request', false); show('error', false); show('waiting', false);
     try {
-      const res = await fetch('stats.json', { cache: 'no-store' });
-      if (!res.ok) throw new Error('missing');
-      render(await res.json());
-    } catch {
-      $('setupPanel').classList.remove('hidden');
-    }
+      const d = await fetchStats(player, platform);
+      if (d && d.global) {
+        render(d);
+      } else {
+        $('dash').classList.add('hidden');
+        $('refresh').classList.add('hidden');
+        $('updated').textContent = '';
+        askForLookup(player, platform, d && d.lastError
+          ? `The last lookup for "${player}" failed (${d.lastError}). Check the name and try again.`
+          : `"${player}" hasn't been looked up yet.`);
+      }
+    } catch (e) { showError(e.message); }
+  }
+
+  $('player').value = store.get('player', '');
+  $('platform').value = store.get('platform', 'PC');
+  $('setup').addEventListener('submit', e => {
+    e.preventDefault();
+    const player = $('player').value.trim(), platform = $('platform').value;
+    if (!player) return;
+    store.set('player', player); store.set('platform', platform);
+    lookup(player, platform);
+  });
+  $('refresh').onclick = () => {
+    const player = store.get('player', ''), platform = store.get('platform', 'PC');
+    if (!player) return;
+    window.open(issueUrl(player, platform), '_blank', 'noopener');
+    startPolling(player, platform);
+  };
+  function load() {
+    const player = store.get('player', '');
+    if (player) lookup(player, store.get('platform', 'PC'));
   }
 
   renderOpened();
