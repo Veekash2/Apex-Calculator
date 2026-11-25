@@ -8,21 +8,10 @@ Uses the [Apex Legends Status API](https://apexlegendsapi.com) to look up player
 
 ## How it works
 
-- `.github/workflows/update-stats.yml` runs hourly (or on demand from the Actions tab). It calls the API with the `APEX_API_KEY` **repository secret** and commits the result to `stats.json`.
-- `index.html` (GitHub Pages) reads `stats.json`. The API key never reaches the website.
+- On the site, type a profile name and click **Look up**. For a new profile the site opens a pre-filled GitHub issue (`lookup:<PLATFORM>:<name>`); submit it.
+- The issue triggers `.github/workflows/update-stats.yml`, which calls the API with the `APEX_API_KEY` **repository secret**, commits the result to `stats/<platform>/<name>.json`, and closes the issue. Only issues opened by the repo owner run a lookup.
+- The site waits for that file and shows the stats. Profiles already looked up refresh hourly. The API key never reaches the website.
 - **Packs opened** isn't available from the API, so the site has a counter you update yourself; it's saved in your browser.
-
-## Setup
-
-In **Settings → Secrets and variables → Actions**:
-
-| Type     | Name            | Value                                   |
-|----------|-----------------|-----------------------------------------|
-| Secret   | `APEX_API_KEY`  | your key from apexlegendsapi.com        |
-| Variable | `APEX_PLAYER`   | your in-game name                       |
-| Variable | `APEX_PLATFORM` | `PC`, `PS4` or `X1` (defaults to `PC`)  |
-
-Then run **Actions → Update stats → Run workflow**.
 
 ## Command line
 
