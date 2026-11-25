@@ -103,6 +103,22 @@
   @keyframes spin { to { transform: rotate(360deg); } }
   ol.steps { margin: 8px 0 12px; padding-left: 20px; }
   ol.steps li { margin: 6px 0; }
+  .dpk-scale { position: relative; display: flex; gap: 2px; margin: 18px 0 10px; }
+  .dpk-scale .seg { background: var(--panel-2); padding: 8px 6px; font-size: 11px; color: var(--muted); text-align: center; line-height: 1.3; }
+  .dpk-scale .seg:first-child { border-radius: 8px 0 0 8px; } .dpk-scale .seg:nth-child(4) { border-radius: 0 8px 8px 0; }
+  .dpk-scale .seg b { color: var(--fg); }
+  .dpk-scale .marker { position: absolute; top: -6px; bottom: -6px; width: 4px; margin-left: -2px; background: var(--accent); border-radius: 2px; box-shadow: 0 0 0 2px var(--panel); }
+  details.career { margin: 12px 0; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: var(--panel-2); }
+  details.career summary { cursor: pointer; font-weight: 600; font-size: 14px; }
+  .career-row { display: flex; gap: 10px; align-items: end; flex-wrap: wrap; }
+  .career-row label { font-size: 12px; color: var(--muted); font-weight: 600; display: flex; flex-direction: column; gap: 4px; }
+  .career-row input { width: 140px; font: 600 15px Inter, sans-serif; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; }
+  .persona { display: flex; gap: 18px; align-items: flex-start; }
+  .persona .emoji { font-size: 52px; line-height: 1; flex: none; }
+  .persona .pname { font-size: 30px; color: var(--accent); margin: 2px 0 6px; }
+  .persona p { margin: 0 0 10px; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--line); }
   .hidden { display: none !important; }
   footer { margin-top: 40px; color: var(--muted); font-size: 12px; text-align: center; }
 
@@ -130,6 +146,8 @@
       </div>
       <div class="muted" style="font-size:13px;text-align:right" id="dataNote"></div>
     </section>
+
+    <section class="panel" id="personality" style="margin-top:16px"></section>
 
     <div class="unlock" id="scopeNote" style="margin-top:16px"></div>
 
@@ -164,7 +182,7 @@
     <section class="grid g2">
       <div class="panel" id="meters"></div>
       <div class="panel">
-        <h3>Clean-up &amp; kill stealing <span class="tag est">Estimate</span></h3>
+        <h3>Damage per kill &amp; clean-up <span class="tag est">Estimate</span></h3>
         <div id="cleanup"></div>
       </div>
     </section>
@@ -271,7 +289,7 @@
   }
 
   // Typical-player reference points (rough community averages, per game unless noted)
-  const TYPICAL = { kpg: 0.85, dpg: 420, dpk: 260, klShare: 0.06, rpg: 0.5, top3: 0.2, winRate: 0.04, hsRate: 0.12 };
+  const TYPICAL = { kpg: 0.85, dpg: 420, dpk: 300, klShare: 0.06, rpg: 0.5, top3: 0.2, winRate: 0.04, hsRate: 0.12 };
 
   // Rank thresholds for the estimate (rough): Rookie..Predator
   const TIERS = ['Rookie', 'Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond', 'Master', 'Predator'];
@@ -312,8 +330,11 @@
   }
 
   // ---------- render ----------
+  let lastData = null;
   function render(d) {
+    lastData = d;
     const { g, legends, T, M } = analyse(d);
+    { const c = careerDpk(); if (c) M.dpk = c.dpk; } // all-time Career numbers win when entered
     $('pName').textContent = g.name || '—';
     if (g.avatar) $('avatar').src = g.avatar; else $('avatar').classList.add('hidden');
     $('dataNote').innerHTML = `${legends.length} legend${legends.length === 1 ? '' : 's'} with trackers<br>Updated ${new Date(d.updated || Date.now()).toLocaleString()}`;
@@ -376,26 +397,11 @@
     }
     $('roleBadge').textContent = '★ ' + role;
 
-    // ---- clean-up / stealing ----
-    let cu = '';
-    if (M.cleanupKills != null) {
-      const share = T.kills ? M.cleanupKills / T.kills : 0;
-      cu = `<div class="v">${fmt(M.cleanupKills)}</div><div class="s">estimated clean-up kills (${pct(share)} of your kills)</div>
-        <p>You have <b>${fmt(T.kills)}</b> kills from <b>${fmt(T.knocks)}</b> knockdowns. Kills beyond your own knocks are usually finishing enemies a teammate knocked: clean-up or "stolen" kills.</p>
-        <p class="muted">${share > 0.25 ? 'That\'s a lot of clean-up. You\'re great at confirming kills, but make sure you\'re also starting fights.' : share > 0.1 ? 'A healthy mix of your own knocks and finishing teammates\' knocks.' : 'Most of your kills come from your own knocks. You\'re not a kill stealer.'}</p>`;
-    } else if (M.dpk != null) {
-      const idx = TYPICAL.dpk / M.dpk; // >1 = finishes with less damage than typical
-      const pctDiff = Math.round((M.dpk / TYPICAL.dpk - 1) * 100);
-      const verdict = idx >= 1.15 ? { label: 'Likely kill-stealer / closer', txt: `You deal about <b>${Math.abs(pctDiff)}% less damage per kill</b> than a typical player, which usually means you pick up a lot of kills on enemies others have already damaged or knocked.` }
-        : idx <= 0.85 ? { label: 'Setter, not a stealer', txt: `You deal about <b>${pctDiff}% more damage per kill</b> than a typical player. You soften enemies and your teammates often finish them, so <b>you're the one getting kills stolen</b>, not the stealer.` }
-        : { label: 'Balanced', txt: 'Your damage per kill is close to typical: a fair mix of your own kills and clean-up.' };
-      cu = `<div class="v">${esc(verdict.label)}</div><div class="s">Clean-up index ${idx.toFixed(2)} (1.00 = typical, higher = more clean-up)</div>
-        <p>${verdict.txt}</p>
-        <div class="unlock">For an actual clean-up kill count, equip the <b>Knockdowns</b> tracker on your main legend (<a href="#trackers">how</a>). Kills minus knockdowns ≈ kills you finished for teammates.</div>`;
-    } else {
-      cu = '<p class="muted">Equip <b>Kills</b>, <b>Damage</b> and <b>Knockdowns</b> trackers to measure this.</p>';
-    }
-    $('cleanup').innerHTML = cu;
+    // ---- damage per kill (clean-up) ----
+    renderCleanup(T, M);
+
+    // ---- Apex personality ----
+    renderPersonality(T, M, legends);
 
     // ---- strengths & weaknesses ----
     const S = [], W = [];
@@ -410,7 +416,7 @@
       const better = 100 - als;
       (better >= 50 ? S : W).push(`<b>Ranked standing</b>: top ${als.toFixed(1)}% of ranked players this split, ahead of about ${better.toFixed(0)}% of them.`);
     }
-    if (M.dpk != null && M.dpk > TYPICAL.dpk * 1.15) W.push(`<b>Converting damage to kills</b>: ${fmt(M.dpk)} damage per kill vs typical ${TYPICAL.dpk}. You deal plenty of damage but teammates often finish your targets. Push knocked enemies faster, or use faster-killing weapons up close.`);
+    if (M.dpk != null && M.dpk > 400) W.push(`<b>Converting damage to kills</b>: ${fmt(M.dpk)} damage per kill (over 400 = heavy lifting). You deal plenty of damage but teammates often finish your targets. Push knocked enemies faster, or use faster-killing weapons up close.`);
     if (legends.length === 1) W.push(`<b>Legend pool</b>: all tracked stats are on ${esc(legends[0].name)}. Being solid on a second legend helps when yours is taken.`);
     const li = (arr, cls, sym, empty) => arr.length ? arr.map(t => `<li><span class="ico ${cls}">${sym}</span><span>${t}</span></li>`).join('') : `<li><span class="ico info">i</span><span class="muted">${empty}</span></li>`;
     $('strengths').innerHTML = li(S, 'good', '+', 'Nothing stands out above typical yet. More trackers will reveal strengths.');
@@ -470,6 +476,95 @@
 
     $('status').classList.add('hidden');
     $('report').classList.remove('hidden');
+  }
+
+  // ---------- damage per kill / clean-up ----------
+  // Bands: <250 clean-up, 250-350 average, 350-400 above average, >400 heavy lifting.
+  function dpkBand(dpk) {
+    if (dpk < 250) return { key: 'cleanup', label: 'Clean-up specialist', txt: 'Under 250 damage per kill: you likely get a lot of clean-up kills on weakened enemies, or fight a lot of close-range and third-party fights where teammates already cracked shields.' };
+    if (dpk <= 350) return { key: 'average', label: 'Average range', txt: '250–350 damage per kill: you win fair 1v1s, trade some poke damage, and get a normal mix of full kills and teammate clean-ups.' };
+    if (dpk <= 400) return { key: 'above', label: 'Above average', txt: '350–400 damage per kill: you put in more damage than most for each kill. Some of your targets are probably being finished by teammates.' };
+    return { key: 'heavy', label: 'Heavy lifter', txt: 'Over 400 damage per kill: you do the heavy lifting, either poking from range without finishing knocks, or teammates taking kills after you did most of the work.' };
+  }
+  function careerDpk() {
+    const dmg = +store.get('careerDamage', 0), k = +store.get('careerKills', 0);
+    return dmg > 0 && k > 0 ? { dmg, k, dpk: dmg / k } : null;
+  }
+
+  function renderCleanup(T, M) {
+    const career = careerDpk();
+    const src = career ? { dpk: career.dpk, dmg: career.dmg, k: career.k, label: 'all-time (Career page)' }
+      : (T.kills && T.damage) ? { dpk: T.damage / T.kills, dmg: T.damage, k: T.kills, label: 'tracked legends only' } : null;
+    let html = '';
+    if (src) {
+      const b = dpkBand(src.dpk);
+      const pos = Math.min(100, src.dpk / 500 * 100);
+      html += `<div class="v">${fmt(src.dpk)} <span style="font-size:18px" class="muted">dmg / kill</span></div>
+        <div class="s">${fmt(src.dmg)} damage ÷ ${fmt(src.k)} kills · ${src.label}</div>
+        <div class="dpk-scale" aria-label="Damage per kill scale">
+          <div class="seg" style="flex:250">Under 250<br><b>Clean-up</b></div>
+          <div class="seg" style="flex:100">250–350<br><b>Average</b></div>
+          <div class="seg" style="flex:50">350–400</div>
+          <div class="seg" style="flex:100">Over 400<br><b>Heavy lifting</b></div>
+          <div class="marker" style="left:${pos}%" title="You: ${fmt(src.dpk)}"></div>
+        </div>
+        <p><b>${b.label}.</b> ${b.txt}</p>`;
+    } else {
+      html += '<p class="muted">Enter your Career totals below, or equip Kills and Damage trackers, to see this.</p>';
+    }
+    if (M.cleanupKills != null) {
+      const share = T.kills ? M.cleanupKills / T.kills : 0;
+      html += `<p>Knockdown check: <b>${fmt(T.kills)}</b> kills from <b>${fmt(T.knocks)}</b> knockdowns means about <b>${fmt(M.cleanupKills)}</b> kills (${pct(share)}) were enemies a teammate knocked.</p>`;
+    }
+    html += `<details class="career"${career ? '' : ' open'}><summary>Use your all-time Career stats ${career ? '(entered)' : ''}</summary>
+        <p class="muted" style="font-size:13px">In Apex: Lobby → click your <b>name / level</b> above your legend to open your lifetime stats. Enter your total damage and kills:</p>
+        <div class="career-row">
+          <label>Total damage<input type="number" min="0" id="cDmg" value="${esc(store.get('careerDamage', ''))}"></label>
+          <label>Total kills<input type="number" min="0" id="cKills" value="${esc(store.get('careerKills', ''))}"></label>
+          <button class="btn primary" type="button" id="cSave">Update</button>
+        </div>
+      </details>
+      <p class="muted" style="font-size:13px"><b>Why this isn't exact:</b> shooting knocked players (thirsting) adds up to 100 damage without an extra kill, and poke damage enemies heal back also inflates your total. So a high number doesn't always mean your kills are being stolen, and a low number is often just good team focus fire.</p>`;
+    $('cleanup').innerHTML = html;
+    $('cSave').onclick = () => {
+      store.set('careerDamage', String(Math.max(0, +$('cDmg').value || 0)));
+      store.set('careerKills', String(Math.max(0, +$('cKills').value || 0)));
+      if (lastData) render(lastData);
+    };
+  }
+
+  // ---------- Apex personality ----------
+  function renderPersonality(T, M, legends) {
+    const dpk = M.dpk;
+    const main = [...legends].sort((a, b) => (b.s.kills || 0) - (a.s.kills || 0))[0];
+    const P = [
+      { when: () => M.kpg >= 1.5 && M.klShare >= 0.1, name: 'The Apex Predator', emoji: '👑',
+        txt: 'You drop in to win fights, not just survive them. High kills per game and a habit of holding the kill-leader crown: lobbies know your name by the end of the match.' },
+      { when: () => dpk != null && dpk < 250, name: 'The Vulture', emoji: '🦅',
+        txt: "You have a nose for weak squads. You arrive when shields are cracked, sweep up the knocks and leave with the kills. Third-partying is an art, and you've mastered it." },
+      { when: () => dpk != null && dpk > 400, name: 'The Unsung Workhorse', emoji: '🛠️',
+        txt: "You do the damage, someone else gets the credit. Whether it's long-range poke or cracking shields for your squad, your team wins fights because of the work you put in first." },
+      { when: () => M.rpg >= 1, name: 'The Guardian Angel', emoji: '🪽',
+        txt: 'No one stays down on your watch. You keep your squad in the fight with revives and respawns: the teammate everyone wants but nobody thanks.' },
+      { when: () => M.top3 >= 0.35, name: 'The Ring Strategist', emoji: '🧭',
+        txt: 'You play the circle as much as the enemies. Smart rotations and picking your fights get your squad into the final three again and again.' },
+      { when: () => M.klShare >= 0.07, name: 'The Momentum Monster', emoji: '🔥',
+        txt: "Once you get rolling, you don't stop. A good share of your kills come while you're already kill leader: you turn an early lead into a full-blown rampage." },
+      { when: () => dpk != null && dpk > 350, name: 'The Shield Cracker', emoji: '🛡️',
+        txt: "You open fights. You put the first big damage on enemies so your squad can finish them, a selfless style that doesn't always show on the kill feed." },
+      { when: () => true, name: 'The All-Rounder', emoji: '⚖️',
+        txt: 'A bit of everything: you take your fights, trade fairly and finish what you start. Solid in any squad, with room to specialise.' },
+    ];
+    const p = P.find(x => { try { return x.when(); } catch { return false; } });
+    const traits = [];
+    if (dpk != null) traits.push(`${dpkBand(dpk).label} (${fmt(dpk)} dmg/kill)`);
+    if (M.klShare != null) traits.push(`${pct(M.klShare, 1)} kills as kill leader`);
+    if (M.kpg != null) traits.push(`${fmt(M.kpg, 2)} kills/game`);
+    if (M.rpg != null) traits.push(`${fmt(M.rpg, 2)} revives/game`);
+    if (main) traits.push(`${main.name} main`);
+    $('personality').innerHTML = `<div class="persona"><div class="emoji" aria-hidden="true">${p.emoji}</div>
+      <div><div class="k">Your Apex personality</div><h3 class="pname">${p.name}</h3><p>${p.txt}</p>
+      <div class="chips">${traits.map(t => `<span class="chip">${esc(t)}</span>`).join('')}</div></div></div>`;
   }
 
   // ---------- red shards ----------
