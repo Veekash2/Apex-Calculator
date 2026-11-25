@@ -125,35 +125,12 @@
 <div class="wrap">
   <header class="top">
     <div class="brand"><div class="mark"></div>Apex <span>Calculator</span></div>
-    <div>
-      <button id="refresh" class="hidden" title="Reload stats">↻ Refresh</button>
-      <button id="editBtn" class="hidden">Change player</button>
-    </div>
+    <div class="muted" id="updated" style="font-size:13px"></div>
   </header>
 
-  <section id="setupPanel" class="panel">
-    <form class="setup" id="setup">
-      <div>
-        <label for="player">In-game name</label>
-        <input id="player" required autocomplete="off" placeholder="e.g. YourName">
-      </div>
-      <div>
-        <label for="platform">Platform</label>
-        <select id="platform">
-          <option value="PC">PC</option>
-          <option value="PS4">PlayStation</option>
-          <option value="X1">Xbox</option>
-          <option value="SWITCH">Switch</option>
-        </select>
-      </div>
-      <div>
-        <label for="apikey">API key</label>
-        <input id="apikey" type="password" required autocomplete="off" placeholder="From apexlegendsapi.com">
-      </div>
-      <button class="primary" type="submit" id="go">Load stats</button>
-    </form>
-    <p class="hint">Your API key is saved only in this browser (localStorage) and sent only to the Apex Legends Status API. It is never stored on GitHub.</p>
-    <div id="error" class="error hidden"></div>
+  <section id="setupPanel" class="panel hidden">
+    <h3 style="font-size:22px">No stats yet</h3>
+    <p class="hint" id="setupMsg">Stats are fetched hourly by a GitHub Action using the <code>APEX_API_KEY</code> secret. Set the <code>APEX_PLAYER</code> (and optionally <code>APEX_PLATFORM</code>) repository variables, then run the <b>Update stats</b> workflow from the Actions tab.</p>
   </section>
 
   <main id="dash" class="hidden">
@@ -329,51 +306,26 @@
       }
     }
 
+    if (d.updated) {
+      const t = new Date(d.updated);
+      const mins = Math.round((Date.now() - t) / 60000);
+      const ago = mins < 1 ? 'just now' : mins < 60 ? `${mins} min ago` : mins < 1440 ? `${Math.round(mins / 60)} h ago` : t.toLocaleDateString();
+      $('updated').textContent = `Updated ${ago}`;
+      $('updated').title = t.toLocaleString();
+    }
     $('setupPanel').classList.add('hidden');
     $('dash').classList.remove('hidden');
-    $('refresh').classList.remove('hidden');
-    $('editBtn').classList.remove('hidden');
-  }
-
-  function showError(msg) {
-    $('error').textContent = msg;
-    $('error').classList.remove('hidden');
-    $('setupPanel').classList.remove('hidden');
-    $('dash').classList.add('hidden');
   }
 
   async function load() {
-    const player = store.get('player', ''), platform = store.get('platform', 'PC'), key = store.get('key', '');
-    if (!player || !key) return;
-    $('error').classList.add('hidden');
-    document.body.classList.add('loading');
     try {
-      const url = 'https://api.mozambiquehe.re/bridge?player=' + encodeURIComponent(player) +
-        '&platform=' + encodeURIComponent(platform) + '&auth=' + encodeURIComponent(key);
-      const res = await fetch(url);
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || data.Error) throw new Error(data.Error || `Request failed (${res.status})`);
-      render(data);
-    } catch (e) {
-      showError(e.message === 'Failed to fetch' ? 'Could not reach the API. Check your connection and try again.' : e.message);
-    } finally {
-      document.body.classList.remove('loading');
+      const res = await fetch('stats.json', { cache: 'no-store' });
+      if (!res.ok) throw new Error('missing');
+      render(await res.json());
+    } catch {
+      $('setupPanel').classList.remove('hidden');
     }
   }
-
-  // ---------- setup ----------
-  $('player').value = store.get('player', '');
-  $('platform').value = store.get('platform', 'PC');
-  $('apikey').value = store.get('key', '');
-  $('setup').addEventListener('submit', e => {
-    e.preventDefault();
-    store.set('player', $('player').value.trim());
-    store.set('platform', $('platform').value);
-    store.set('key', $('apikey').value.trim());
-    load();
-  });
-  $('refresh').onclick = load;
-  $('editBtn').onclick = () => { $('setupPanel').classList.toggle('hidden'); };
 
   renderOpened();
   setRing($('ring1'), 0);

@@ -1,0 +1,55 @@
+name: Update stats
+
+on:
+  schedule:
+    - cron: "17 * * * *"   # hourly
+  workflow_dispatch:        # "Run workflow" button in the Actions tab
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-stats
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch player stats
+        env:
+          APEX_API_KEY: ${{ secrets.APEX_API_KEY }}
+          APEX_PLAYER: ${{ vars.APEX_PLAYER }}
+          APEX_PLATFORM: ${{ vars.APEX_PLATFORM || 'PC' }}
+        run: |
+          if [ -z "$APEX_PLAYER" ]; then
+            echo "::error::Set the APEX_PLAYER repository variable (Settings > Secrets and variables > Actions > Variables)."
+            exit 1
+          fi
+          player=$(jq -rn --arg p "$APEX_PLAYER" '$p|@uri')
+          curl -sS --fail-with-body -H "Authorization: $APEX_API_KEY" \
+            "https://api.mozambiquehe.re/bridge?player=${player}&platform=${APEX_PLATFORM}" -o raw.json \
+            || { echo "::error::API request failed: $(head -c 300 raw.json)"; exit 1; }
+          if jq -e '.Error' raw.json >/dev/null; then
+            echo "::error::API error: $(jq -r '.Error' raw.json)"; exit 1
+          fi
+          # Keep only what the site needs (drops the large all-legends block).
+          jq '{updated: (now|todate), global, realtime, legends: {selected: .legends.selected}}' raw.json > stats.new.json
+          rm raw.json
+
+      - name: Commit if stats changed
+        run: |
+          strip='del(.updated, .realtime)'
+          if [ -f stats.json ] && [ "$(jq -S "$strip" stats.json)" = "$(jq -S "$strip" stats.new.json)" ]; then
+            echo "No change in stats."
+            rm stats.new.json
+            exit 0
+          fi
+          mv stats.new.json stats.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add stats.json
+          git commit -m "Update stats"
+          git push
