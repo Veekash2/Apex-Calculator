@@ -101,6 +101,8 @@
   .loading { display: flex; align-items: center; gap: 10px; color: var(--muted); }
   .spinner { width: 16px; height: 16px; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
+  ol.steps { margin: 8px 0 12px; padding-left: 20px; }
+  ol.steps li { margin: 6px 0; }
   .hidden { display: none !important; }
   footer { margin-top: 40px; color: var(--muted); font-size: 12px; text-align: center; }
 
@@ -112,7 +114,7 @@
 <div class="wrap">
   <header class="top">
     <a class="brand" href="./"><div class="mark"></div>Apex <span>Calculator</span></a>
-    <a class="btn" href="./">← Dashboard</a>
+    <span style="display:flex;gap:8px"><a class="btn" href="./">← Dashboard</a><a class="btn" href="packs.html">Pack calculator</a></span>
   </header>
 
   <div id="status" class="panel loading"><div class="spinner"></div><span>Loading analysis…</span></div>
@@ -193,10 +195,27 @@
     </section>
 
     <!-- How to get more -->
-    <h2>Unlock deeper analysis</h2>
-    <section class="panel">
-      <p style="margin-top:0">The stats API only sees the <b>trackers equipped on your legends' banners</b>. Equip these in game (Legends → pick a legend → Banner → Trackers), then open a lobby so they sync:</p>
-      <ul class="points" id="todo"></ul>
+    <h2 id="trackers">How to equip trackers</h2>
+    <p class="lead">The stats API can only see the trackers on your legends' banners, so more trackers = a more complete analysis.</p>
+    <section class="grid g2">
+      <div class="panel">
+        <h3>Steps (in Apex)</h3>
+        <ol class="steps">
+          <li>From the lobby, open the <b>Legends</b> tab.</li>
+          <li>Click the legend you want to track (start with your main).</li>
+          <li>Open <b>Banner</b>, then the <b>Trackers</b> section. Each legend has <b>3 tracker slots</b>.</li>
+          <li>Click a slot and pick a tracker, e.g. <b>Kills</b>, <b>Damage</b>, <b>Games Played</b>. Most trackers start from your lifetime total once equipped.</li>
+          <li><b>Select that legend</b> in the lobby. The API reads the banner of the legend you have selected.</li>
+          <li>Wait a minute, then press <b>↻ Refresh</b> on the dashboard (or reload this page).</li>
+          <li>Repeat for each legend you play. The API remembers each legend's trackers once it has seen them.</li>
+        </ol>
+        <p class="muted" style="font-size:13px;margin-bottom:0">You only have 3 slots per legend, so you can swap trackers over time: the API keeps the last value it saw for each one.</p>
+      </div>
+      <div class="panel">
+        <h3>What to equip for this page</h3>
+        <ul class="points" id="todo"></ul>
+        <p class="muted" style="font-size:13px;margin-bottom:0">Best 3 for your main: <b>Games Played</b>, <b>Kills</b>, <b>Damage</b>. Then rotate in Knockdowns, Revives and Wins.</p>
+      </div>
     </section>
   </main>
 
@@ -372,7 +391,7 @@
         : { label: 'Balanced', txt: 'Your damage per kill is close to typical: a fair mix of your own kills and clean-up.' };
       cu = `<div class="v">${esc(verdict.label)}</div><div class="s">Clean-up index ${idx.toFixed(2)} (1.00 = typical, higher = more clean-up)</div>
         <p>${verdict.txt}</p>
-        <div class="unlock">For an actual clean-up kill count, equip the <b>Knockdowns</b> tracker on your main legend. Kills minus knockdowns ≈ kills you finished for teammates.</div>`;
+        <div class="unlock">For an actual clean-up kill count, equip the <b>Knockdowns</b> tracker on your main legend (<a href="#trackers">how</a>). Kills minus knockdowns ≈ kills you finished for teammates.</div>`;
     } else {
       cu = '<p class="muted">Equip <b>Kills</b>, <b>Damage</b> and <b>Knockdowns</b> trackers to measure this.</p>';
     }

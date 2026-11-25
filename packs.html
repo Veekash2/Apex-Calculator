@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pack Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0e11; --panel: #16181d; --panel-2: #1d2027; --line: #2a2e37;
+    --fg: #eef0f3; --muted: #8b919c; --accent: #e5323a; --accent-soft: rgba(229,50,58,.14); --gold: #f1b434; --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--fg); }
+  body { font: 15px/1.55 Inter, system-ui, sans-serif; min-height: 100vh;
+    background-image: radial-gradient(1200px 500px at 80% -10%, rgba(229,50,58,.12), transparent 60%); }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 28px 16px 64px; }
+  h1, h2, h3 { font-family: Rajdhani, sans-serif; letter-spacing: .02em; margin: 0; }
+  h2 { font-size: 26px; font-weight: 700; margin: 32px 0 4px; }
+  h3 { font-size: 19px; font-weight: 700; }
+  p.lead { margin: 0 0 12px; color: var(--muted); }
+  a { color: var(--fg); }
+  header.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+  .brand { display: flex; align-items: center; gap: 10px; font-family: Rajdhani, sans-serif; font-weight: 700; font-size: 22px; text-transform: uppercase; text-decoration: none; }
+  .brand .mark { width: 30px; height: 30px; background: var(--accent); clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+  .brand span { color: var(--accent); }
+  .nav { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn { font: 600 14px Inter, sans-serif; border: 1px solid var(--line); background: var(--panel-2); color: var(--fg);
+    padding: 8px 14px; border-radius: 10px; cursor: pointer; text-decoration: none; display: inline-block; }
+  .btn:hover { border-color: #3a3f4b; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.small { padding: 4px 10px; font-size: 13px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; }
+  .muted { color: var(--muted); }
+  .k { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+
+  /* summary */
+  .summary { position: sticky; top: 0; z-index: 5; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 12px 0; background: var(--bg); }
+  .stat { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; }
+  .stat .v { font-family: Rajdhani, sans-serif; font-weight: 700; font-size: 40px; line-height: 1.05; }
+  .stat.hero { border-color: rgba(229,50,58,.5); background: linear-gradient(180deg, rgba(229,50,58,.12), var(--panel)); }
+  .stat.hero .v { color: var(--accent); }
+  .pbar { height: 8px; background: var(--panel-2); border-radius: 999px; overflow: hidden; margin-top: 10px; }
+  .pbar div { height: 100%; background: var(--accent); border-radius: 999px; transition: width .4s; }
+
+  /* inputs */
+  .fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+  .field { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+  .field label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+  .field .row { display: flex; gap: 8px; align-items: center; }
+  .field small { color: var(--muted); font-size: 12px; }
+  input[type=number], input[type=date], select { width: 100%; font: 600 15px Inter, sans-serif; color: var(--fg); background: var(--bg);
+    border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; outline: none; }
+  input:focus, select:focus { border-color: var(--accent); }
+  input.over { border-color: var(--gold); }
+  details { margin-top: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+  details summary { cursor: pointer; padding: 14px 18px; font-weight: 600; display: flex; justify-content: space-between; gap: 12px; list-style: none; }
+  details summary::-webkit-details-marker { display: none; }
+  details summary::before { content: "▸"; color: var(--muted); margin-right: 8px; transition: transform .15s; }
+  details[open] summary::before { transform: rotate(90deg); }
+  details summary .sum { color: var(--muted); font-weight: 500; margin-left: auto; }
+  details .body { padding: 0 18px 18px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 9px 8px; border-bottom: 1px solid var(--line); }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
+  td.num, th.num { text-align: right; }
+  .heir-form { display: grid; grid-template-columns: 1.2fr 1fr 1fr auto; gap: 10px; align-items: end; margin-bottom: 14px; }
+  .note { font-size: 13px; color: var(--muted); margin-top: 10px; }
+  .hidden { display: none !important; }
+  footer { margin-top: 40px; color: var(--muted); font-size: 12px; text-align: center; }
+
+  @media (max-width: 720px) {
+    .summary { grid-template-columns: 1fr 1fr; position: static; }
+    .summary .stat.hero { grid-column: 1 / -1; }
+    .heir-form { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="brand" href="./"><div class="mark"></div>Apex <span>Calculator</span></a>
+    <nav class="nav">
+      <a class="btn" href="./">Dashboard</a>
+      <a class="btn" href="analysis.html">Analysis</a>
+    </nav>
+  </header>
+
+  <h1 style="font-size:34px">Apex Pack calculator</h1>
+  <p class="lead">Add up every pack you've earned to see how close you are to guaranteed red shards. Everything is saved in this browser.</p>
+
+  <section class="summary">
+    <div class="stat"><div class="k">Packs opened</div><div class="v" id="sTotal">0</div><div class="muted" style="font-size:13px" id="sTotalSub"></div></div>
+    <div class="stat"><div class="k">Since last heirloom</div><div class="v" id="sSince">0</div><div class="muted" style="font-size:13px" id="sSinceSub">No heirloom yet</div></div>
+    <div class="stat hero"><div class="k">Packs until guaranteed heirloom</div><div class="v" id="sLeft">500</div>
+      <div class="pbar"><div id="sBar" style="width:0"></div></div></div>
+  </section>
+
+  <h2>General</h2>
+  <p class="lead">Your level fills in from your last lookup on the dashboard.</p>
+  <div class="fields" id="general"></div>
+
+  <h2>Battle passes</h2>
+  <p class="lead">Enter how many Apex Packs you got from each battle pass. Count the Apex Packs you claimed on that pass's reward track (free and premium). Leave a season blank if you didn't play it.</p>
+  <div id="bp"></div>
+
+  <h2>Season treasure packs</h2>
+  <p class="lead">Seasons 5–21 had treasure packs on the map. Each treasure pack also gave an Apex Pack.</p>
+  <div id="treasure"></div>
+
+  <h2>Events</h2>
+  <p class="lead">Packs from event reward tracks, login rewards and anniversaries. The maximum per event is shown; a field turns gold if you enter more.</p>
+  <div id="events"></div>
+
+  <h2>Heirloom history</h2>
+  <p class="lead">Only add heirlooms you got from opening packs (not ones bought or crafted another way). The 500-pack countdown resets each time.</p>
+  <section class="panel">
+    <form class="heir-form" id="heirForm">
+      <div><label class="k" for="hLegend">Legend</label><select id="hLegend"></select></div>
+      <div><label class="k" for="hPacks">Packs opened at the time</label><input id="hPacks" type="number" min="0" required></div>
+      <div><label class="k" for="hDate">Date</label><input id="hDate" type="date"></div>
+      <button class="btn primary" type="submit">Add</button>
+    </form>
+    <table id="heirTable"></table>
+    <p class="note">Tip: "Packs opened at the time" is the total shown at the top of this page when you got the heirloom. Use <b>Use current total</b> to fill it in.</p>
+    <button class="btn small" type="button" id="useTotal">Use current total</button>
+  </section>
+
+  <footer>Community tool, for information only. You get guaranteed heirloom shards by every 500th pack opened; the counter resets when you open heirloom shards. Not affiliated with EA or Respawn.</footer>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const KEY = 'apexcalc.packs';
+  const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } };
+  const saveAll = s => { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch {} };
+  const getLS = (k, d) => { try { const v = localStorage.getItem('apexcalc.' + k); return v === null ? d : v; } catch { return d; } };
+  const setLS = (k, v) => { try { localStorage.setItem('apexcalc.' + k, v); } catch {} };
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const fmt = n => Number(n || 0).toLocaleString();
+  const state = load();
+  state.v = state.v || {};
+  state.heirlooms = state.heirlooms || [];
+
+  // ---- level packs (EA schedule) ----
+  const isPackLevel = l => (l >= 2 && l <= 20) || (l >= 22 && l <= 300 && l % 2 === 0) || (l >= 305 && l <= 500 && l % 5 === 0);
+  const levelPacks = (level, prestige) => {
+    let n = 0; for (let l = 2; l <= Math.min(level, 500); l++) if (isPackLevel(l)) n++;
+    return n + Math.max(0, prestige) * 199;
+  };
+
+  // ---- data ----
+  const GENERAL = [
+    { id: 'level', label: 'Account level', hint: 'Level-up packs are worked out from this', max: 500 },
+    { id: 'prestige', label: 'Prestige', hint: 'Each completed prestige = 199 level packs', max: 10 },
+    { id: 'twitch', label: 'Twitch / Prime Gaming packs', max: 5 },
+    { id: 'bought', label: 'Purchased packs' },
+    { id: 'other', label: 'Other packs not listed', hint: 'Challenges, store freebies, etc.' },
+  ];
+  const BP_SEASONS = [];
+  for (let s = 31; s >= 22; s--) { BP_SEASONS.push({ id: `bp${s}a`, label: `Season ${s} · Split 1` }, { id: `bp${s}b`, label: `Season ${s} · Split 2` }); }
+  for (let s = 21; s >= 1; s--) BP_SEASONS.push({ id: `bp${s}`, label: `Season ${s}` });
+  const TREASURE = { 21: 8, 20: 8, 19: 8, 18: 8, 17: 8, 16: 8, 15: 8, 14: 8, 13: 8, 12: 8, 11: 8, 10: 10, 9: 10, 8: 10, 7: 9, 6: 6, 5: 9 };
+  const EVENTS = [
+    ['Season 28', [['Aftershock', 3]]],
+    ['Anniversaries', [['6th Anniversary', 6], ['5th Anniversary', 7], ['4th Anniversary', 7], ['3rd Anniversary', 7], ['Anniversary 2021', 12]]],
+    ['Season 23', [['Launch Royale Recon', 6], ["Winter's Haunt", 1]]],
+    ['Season 22', [['Space Hunt', 15]]],
+    ['Season 21', [['Void Reckoning', 1]]],
+    ['Season 20', [['Shadow Society', null]]],
+    ['Season 19', [['Post Malone', 2], ['Final Fantasy', 13]]],
+    ['Season 17', [['Threat Level', 1], ['Neon Network', 3]]],
+    ['Season 16', [['Login Rewards Feb 2023', 2], ['Revelry launch Twitch rewards', 4], ['Imperial Guard Collection', 7], ['Sun Squad', 1], ['Veiled Collection', 1]]],
+    ['Season 15', [['Spellbound', 1], ['Celestial Sunrise', 1], ['Wintertide week 2', 1]]],
+    ['Season 14', [['Beast of Prey', 1]]],
+    ['Season 13', [['Awakening', 1], ['Summer Sundown', 1], ['Gaiden', 2]]],
+    ['Season 12', [['Login Rewards Feb 2022', 10], ['Warriors', 1], ['The Williams Sendoff', 1], ['Unshackled week 2', 2]]],
+    ['Season 11', [['Raiders', 1], ['Dark Depths week 1', 2], ['Dark Depths week 2', 2]]],
+    ['Season 10', [['Old Ways, New Dawn', 3], ['Monsters Within week 1', 1], ['Monsters Within week 2', 2], ['Monsters Within week 3', 1], ['Arenas Flash #4', 2], ['Arenas Flash #5', 2], ['Arenas Flash #6', 2]]],
+    ['Season 9', [['ThrillSeekers week 1', 1], ['ThrillSeekers week 2', 2], ['ThrillSeekers week 3', 1], ['Arenas Flash #1', 2], ['Arenas Flash #2', 2], ['Arenas Flash #3', 2]]],
+    ['Season 2', [['Iron Crown', 2]]],
+  ];
+  const LEGENDS = ['Alter', 'Ash', 'Axle', 'Ballistic', 'Bangalore', 'Bloodhound', 'Catalyst', 'Caustic', 'Conduit', 'Crypto', 'Fuse', 'Gibraltar', 'Horizon',
+    'Lifeline', 'Loba', 'Mad Maggie', 'Mirage', 'Newcastle', 'Octane', 'Pathfinder', 'Rampart', 'Revenant', 'Seer', 'Sparrow', 'Valkyrie', 'Vantage', 'Wattson', 'Wraith'];
+
+  const slug = s => s.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  const val = id => Math.max(0, parseInt(state.v[id], 10) || 0);
+
+  function field(id, label, max, hint) {
+    const v = state.v[id] ?? '';
+    return `<div class="field"><label for="f-${id}">${esc(label)}</label>
+      <input id="f-${id}" data-id="${id}" type="number" min="0" ${max ? `data-max="${max}"` : ''} value="${esc(v)}" placeholder="0">
+      ${max || hint ? `<small>${max ? `Max ${max}` : ''}${max && hint ? ' · ' : ''}${hint ? esc(hint) : ''}</small>` : ''}</div>`;
+  }
+  function group(title, items, open = false) {
+    const ids = items.map(i => i.id);
+    return `<details ${open ? 'open' : ''} data-group="${ids.join(',')}"><summary><span>${esc(title)}</span><span class="sum" data-sum></span></summary>
+      <div class="body"><div class="fields">${items.map(i => field(i.id, i.label, i.max, i.hint)).join('')}</div></div></details>`;
+  }
+
+  // ---- build UI ----
+  // autofill level/prestige from the dashboard's last lookup, unless user typed their own
+  if (state.v.level == null && getLS('level', null) != null) state.v.level = getLS('level');
+  if (state.v.prestige == null && getLS('prestige', null) != null) state.v.prestige = getLS('prestige');
+  $('general').innerHTML = GENERAL.map(g => field(g.id, g.label, g.max, g.hint)).join('') +
+    `<div class="field"><label>Level-up packs</label><div style="font:700 26px Rajdhani,sans-serif" id="lvPacks">0</div><small>Worked out from level + prestige</small></div>`;
+
+  $('bp').innerHTML = group('Seasons 22–31 (two splits per season)', BP_SEASONS.filter(b => /[ab]$/.test(b.id)), true) +
+    group('Seasons 1–21', BP_SEASONS.filter(b => !/[ab]$/.test(b.id)));
+  $('treasure').innerHTML = group('Treasure packs by season', Object.entries(TREASURE).sort((a, b) => b[0] - a[0]).map(([s, m]) => ({ id: `tr${s}`, label: `Season ${s}`, max: m })));
+  $('events').innerHTML = EVENTS.map(([season, list], i) => group(season, list.map(([name, max]) => ({ id: `ev-${slug(name)}`, label: name, max: max || undefined })), i === 0)).join('');
+
+  $('hLegend').innerHTML = LEGENDS.map(l => `<option>${l}</option>`).join('');
+  $('hDate').valueAsDate = new Date();
+
+  // ---- compute ----
+  function totals() {
+    const lv = levelPacks(val('level'), val('prestige'));
+    let sum = lv;
+    for (const [id] of Object.entries(state.v)) if (id !== 'level' && id !== 'prestige') sum += val(id);
+    return { lv, sum };
+  }
+
+  function recalc() {
+    const { lv, sum } = totals();
+    $('lvPacks').textContent = fmt(lv);
+    $('sTotal').textContent = fmt(sum);
+    $('sTotalSub').textContent = `${fmt(lv)} from levels · ${fmt(sum - lv)} from other sources`;
+    const last = [...state.heirlooms].sort((a, b) => b.packs - a.packs)[0];
+    const since = last ? Math.max(0, sum - last.packs) : sum;
+    $('sSince').textContent = fmt(since);
+    $('sSinceSub').textContent = last ? `Last: ${last.legend} at ${fmt(last.packs)} packs` : 'No heirloom yet';
+    $('sLeft').textContent = since >= 500 ? '0' : fmt(500 - since);
+    $('sBar').style.width = Math.min(100, (since / 500) * 100) + '%';
+    // keep the dashboard / analysis "packs opened" counter in sync
+    setLS('opened', String(since));
+    document.querySelectorAll('details[data-group]').forEach(d => {
+      const s = d.dataset.group.split(',').reduce((a, id) => a + val(id), 0);
+      d.querySelector('[data-sum]').textContent = s ? `${fmt(s)} packs` : '';
+    });
+    renderHeirlooms();
+    saveAll(state);
+  }
+
+  document.addEventListener('input', e => {
+    const id = e.target.dataset && e.target.dataset.id;
+    if (!id) return;
+    const raw = e.target.value;
+    if (raw === '') delete state.v[id]; else state.v[id] = raw;
+    const max = +e.target.dataset.max;
+    e.target.classList.toggle('over', !!max && val(id) > max);
+    recalc();
+  });
+
+  // ---- heirlooms ----
+  function renderHeirlooms() {
+    const rows = [...state.heirlooms].sort((a, b) => a.packs - b.packs);
+    $('heirTable').innerHTML = rows.length
+      ? `<thead><tr><th>Legend</th><th class="num">Packs opened then</th><th>Date</th><th></th></tr></thead><tbody>` +
+        rows.map(h => `<tr><td>${esc(h.legend)}</td><td class="num">${fmt(h.packs)}</td><td>${esc(h.date || '')}</td>
+          <td class="num"><button class="btn small" data-del="${esc(h.id)}">Remove</button></td></tr>`).join('') + '</tbody>'
+      : '<tbody><tr><td class="muted">No heirlooms added.</td></tr></tbody>';
+  }
+  $('heirForm').addEventListener('submit', e => {
+    e.preventDefault();
+    state.heirlooms.push({ id: Date.now().toString(36), legend: $('hLegend').value, packs: Math.max(0, +$('hPacks').value || 0), date: $('hDate').value });
+    $('hPacks').value = '';
+    recalc();
+  });
+  $('heirTable').addEventListener('click', e => {
+    const id = e.target.dataset && e.target.dataset.del;
+    if (!id) return;
+    state.heirlooms = state.heirlooms.filter(h => h.id !== id);
+    recalc();
+  });
+  $('useTotal').onclick = () => { $('hPacks').value = totals().sum; };
+
+  recalc();
+})();
+</script>
+</body>
+</html>

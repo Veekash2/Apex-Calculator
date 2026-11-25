@@ -138,6 +138,7 @@
     <div style="display:flex;align-items:center;gap:12px">
       <span class="muted" id="updated" style="font-size:13px"></span>
       <button id="refresh" class="hidden" type="button" title="Fetch fresh stats now">↻ Refresh</button>
+      <a class="btn" href="packs.html">Pack calculator</a>
       <a id="analysisLink" class="btn primary hidden" href="analysis.html">Full analysis →</a>
     </div>
   </header>
@@ -238,7 +239,7 @@
     </section>
 
     <section class="panel" style="margin-top:16px">
-      <div class="section-title"><h3 id="legendTitle">Selected legend</h3><span class="muted">Trackers equipped on banner</span></div>
+      <div class="section-title"><h3 id="legendTitle">Selected legend</h3><a class="muted" href="analysis.html#trackers">How to add more trackers</a></div>
       <div class="legend-stats" id="legendStats"></div>
     </section>
   </main>
@@ -349,6 +350,7 @@
     $('dash').classList.remove('hidden');
     $('refresh').classList.remove('hidden');
     $('analysisLink').classList.remove('hidden');
+    store.set('level', String(level)); store.set('prestige', String(prestige));
   }
 
   // ---------- live lookup via serverless function (holds APEX_API_KEY) ----------
